@@ -183,6 +183,32 @@ All plugins are configurable in `decky_plugins:`. Key plugins:
 | CSS Loader | disabled | Visual themes |
 | HLTB | disabled | Game completion times |
 
+### SD Card
+
+Deckible auto-detects your SD card and can use it for storage-heavy items.
+
+```yaml
+# Where to store emulation files (ROMs, BIOS, saves)
+emulation_storage: "auto"      # auto, internal, or sdcard
+
+# Move Steam shader cache to SD card (frees 10-50GB)
+move_shader_cache: false
+```
+
+| Option | `emulation_storage` | Description |
+|--------|---------------------|-------------|
+| Auto | `auto` | Use SD card if present, otherwise internal |
+| Internal | `internal` | Always use internal storage (`~/Emulation`) |
+| SD Card | `sdcard` | Always use SD card (fails if not present) |
+
+**Shader Cache**: Steam's shader cache can grow to 10-50GB+. Setting `move_shader_cache: true` moves it to your SD card and creates a symlink, freeing internal storage for games.
+
+**What happens:**
+1. Playbook detects SD card at `/run/media/mmcblk0p1`
+2. Creates `Emulation/{roms,bios,saves,states}` on chosen storage
+3. If shader cache move enabled, relocates it to SD card
+4. EmuDeck instructions show the correct paths
+
 ## After Running
 
 ### Decky Loader
