@@ -52,6 +52,7 @@ ansible-playbook playbook.yml --ask-become-pass
 
 > **Keyboard tip**: Use **Steam + X** to bring up the on-screen keyboard when
 > entering your password or typing commands.
+> If this doesn't work, ensure Steam is running first
 
 ## Configuration
 
