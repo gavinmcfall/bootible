@@ -226,7 +226,8 @@ After a Steam Deck factory reset:
 
 ```
 deckible/
-├── setup.sh                 # Setup script
+├── setup.sh                 # Link private repo to deckible
+├── init-private-repo.sh     # Create your private config repo
 ├── playbook.yml             # Main playbook
 ├── ansible.cfg              # Ansible configuration
 ├── inventory.yml            # Localhost inventory
@@ -254,7 +255,33 @@ A private overlay repo lets you:
 - Update deckible without losing your customizations
 - Sync your config across multiple Steam Decks
 
-### Step 1: Create the Repository
+### Automatic Setup (Recommended)
+
+Run the setup script to create everything automatically:
+
+```bash
+./init-private-repo.sh
+```
+
+This will:
+1. Create a private `steamdeck` repo on your GitHub
+2. Set up the correct folder structure
+3. Download the default configuration
+4. Link it to deckible
+
+**Requirements**: GitHub CLI (`gh`) must be installed and authenticated:
+```bash
+sudo pacman -S github-cli   # or: pip install --user gh
+gh auth login
+```
+
+---
+
+### Manual Setup
+
+If you prefer to set things up manually:
+
+#### Step 1: Create the Repository
 
 **On GitHub:**
 1. Go to [github.com/new](https://github.com/new)
@@ -263,7 +290,7 @@ A private overlay repo lets you:
 4. Check "Add a README file"
 5. Click "Create repository"
 
-### Step 2: Clone and Set Up Structure
+#### Step 2: Clone and Set Up Structure
 
 ```bash
 # Clone your new private repo
@@ -277,7 +304,7 @@ mkdir -p group_vars files/appimages files/flatpaks
 touch files/appimages/.gitkeep files/flatpaks/.gitkeep
 ```
 
-### Step 3: Create Your Configuration
+#### Step 3: Create Your Configuration
 
 Copy the default config and customize it:
 
@@ -307,7 +334,7 @@ password_manager: "1password"
 password_manager_install_method: "distrobox"
 ```
 
-### Step 4: Add Private Files (Optional)
+#### Step 4: Add Private Files (Optional)
 
 If you have Patreon/early access files:
 
@@ -319,7 +346,7 @@ cp ~/Downloads/EmuDeck\ EA\ SteamOS.desktop.download files/appimages/
 cp ~/Downloads/SomeApp.flatpak files/flatpaks/
 ```
 
-### Step 5: Commit and Push
+#### Step 5: Commit and Push
 
 ```bash
 git add -A
@@ -327,7 +354,7 @@ git commit -m "Initial deckible private config"
 git push
 ```
 
-### Step 6: Link to Deckible
+#### Step 6: Link to Deckible
 
 On your Steam Deck (or wherever you run deckible):
 
@@ -338,7 +365,7 @@ cd deckible
 
 This clones your private repo into `deckible/private/`.
 
-### Final Structure
+#### Final Structure
 
 Your private repo should look like this:
 
