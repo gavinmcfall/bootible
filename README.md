@@ -2,7 +2,7 @@
 
 **Deck** + Ans**ible** = Automated Steam Deck setup.
 
-Deckible configures your Steam Deck with a single command. Apps, plugins, remote access, emulation - all configurable, all automated.
+Configure your Steam Deck with one command. Apps, plugins, remote access, emulation - all automated, all survives updates.
 
 ## Features
 
@@ -17,22 +17,36 @@ Everything survives SteamOS updates.
 
 ## Quick Start
 
-### Switch to Desktop Mode
+### One-Liner Install
 
-1. Press the **Steam** button
-2. Select **Power** → **Switch to Desktop**
-3. Wait for Desktop Mode to load
+1. Switch to Desktop Mode: **Steam button** → **Power** → **Switch to Desktop**
+2. Open Konsole (terminal): **Application Menu** → **System** → **Konsole**
+3. Run:
 
-> **Tip**: To use the on-screen keyboard, make sure Steam is running in Desktop Mode.
-> Press **Steam + X** to toggle the keyboard. If it doesn't work, launch Steam from
-> the application menu first.
+```bash
+curl -fsSL https://raw.githubusercontent.com/gavinmcfall/deckible/main/bootstrap.sh | bash
+```
 
-### Open a Terminal
+That's it! The script will:
+- Check/set your sudo password
+- Install Ansible
+- Clone deckible
+- Run the playbook
 
-1. Click the application menu (bottom left corner)
-2. Search for "Konsole" or find it under **System** → **Konsole**
+> **Keyboard**: Press **Steam + X** for the on-screen keyboard (Steam must be running)
 
-### Run These Commands
+### With a Private Config Repo
+
+If you have a [private config repo](#creating-a-private-overlay-repo):
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/gavinmcfall/deckible/main/bootstrap.sh | bash -s -- git@github.com:YOUR_USERNAME/steamdeck.git
+```
+
+---
+
+<details>
+<summary><strong>Manual Installation</strong> (if you prefer step-by-step)</summary>
 
 ```bash
 # 1. Set sudo password (if not already done)
@@ -50,9 +64,7 @@ cd deckible
 ansible-playbook playbook.yml --ask-become-pass
 ```
 
-> **Keyboard tip**: Use **Steam + X** to bring up the on-screen keyboard when
-> entering your password or typing commands.
-> If this doesn't work, ensure Steam is running first
+</details>
 
 ## Configuration
 
