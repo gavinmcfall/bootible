@@ -52,14 +52,17 @@ check_sudo() {
     if passwd -S "$USER" 2>/dev/null | grep -q " NP "; then
         echo -e "${YELLOW}!${NC} No sudo password set"
         echo ""
-        echo "Please set a password now (you'll need this for ansible):"
-        passwd
+        echo "You need to set a password first. Run this command:"
         echo ""
+        echo -e "  ${GREEN}passwd${NC}"
+        echo ""
+        echo "Then re-run the bootstrap script."
+        exit 1
     fi
 
-    # Verify sudo works
+    # Verify sudo works (read from /dev/tty for curl|bash compatibility)
     echo "Enter your sudo password to continue:"
-    if ! sudo true; then
+    if ! sudo -v < /dev/tty; then
         echo -e "${RED}✗${NC} Sudo authentication failed"
         exit 1
     fi
@@ -121,7 +124,8 @@ run_playbook() {
     echo ""
     echo -e "${BLUE}→${NC} Running deckible playbook..."
     echo ""
-    ansible-playbook playbook.yml --ask-become-pass
+    # Use /dev/tty for password prompt (curl|bash compatibility)
+    ansible-playbook playbook.yml --ask-become-pass < /dev/tty
 }
 
 # Main

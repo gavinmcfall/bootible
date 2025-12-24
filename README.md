@@ -21,15 +21,15 @@ Everything survives SteamOS updates.
 
 1. Switch to Desktop Mode: **Steam button** → **Power** → **Switch to Desktop**
 2. Open Konsole (terminal): **Application Menu** → **System** → **Konsole**
-3. Run:
+3. Set a sudo password (if you haven't already): `passwd`
+4. Run:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/gavinmcfall/deckible/main/bootstrap.sh | bash
 ```
 
 That's it! The script will:
-- Check/set your sudo password
-- Install Ansible
+- Install Ansible (via pip or pacman)
 - Clone deckible
 - Run the playbook
 
