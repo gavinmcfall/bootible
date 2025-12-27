@@ -265,6 +265,20 @@ install_proton_ge: true
 install_protontricks: true
 
 # =============================================================================
+# ANDROID (Waydroid)
+# =============================================================================
+# Runs Android apps on Steam Deck via Waydroid container.
+# Uses: https://github.com/ryanrudolfoba/SteamOS-Waydroid-Installer
+#
+# After the playbook runs, launch "Waydroid Installer" from Desktop to
+# complete setup. You'll choose your Android variant in the GUI.
+#
+# NOTE: Waydroid gets wiped on SteamOS updates. Re-run this playbook,
+# then run the installer again. Your Android apps/data persist.
+
+install_waydroid: false
+
+# =============================================================================
 # EMULATION
 # =============================================================================
 # Downloads EmuDeck for emulation setup.

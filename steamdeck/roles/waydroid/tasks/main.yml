@@ -1,0 +1,114 @@
+# Waydroid Role - Android on Steam Deck
+# ======================================
+# Downloads the SteamOS-Waydroid-Installer for Android app support.
+# https://github.com/ryanrudolfoba/SteamOS-Waydroid-Installer
+#
+# Why GUI Required?
+# -----------------
+# The installer is interactive - it asks you to choose:
+# - Android variant (with/without Google Play, TV mode)
+# - Confirms installation steps
+#
+# NOTE: Waydroid gets wiped on SteamOS updates. Re-run this playbook,
+# then run the installer again. Your Android apps/data persist in
+# ~/.local/share/waydroid/
+#
+# After Running This Playbook:
+# ----------------------------
+# 1. Switch to Desktop Mode
+# 2. Double-click "Waydroid Installer" on Desktop
+# 3. Choose your Android variant:
+#    - A13_GAPPS: Android 13 with Google Play Store (recommended)
+#    - A13_NO_GAPPS: Android 13 without Google Play Store
+#    - TV13_GAPPS: Android 13 TV with Google Play Store
+# 4. Wait for installation to complete
+# 5. Launch Waydroid from Gaming Mode library or Desktop
+
+---
+- name: Check if Waydroid is already installed
+  ansible.builtin.stat:
+    path: /usr/bin/waydroid
+  register: waydroid_check
+
+- name: Display Waydroid already installed message
+  ansible.builtin.debug:
+    msg: |
+      Waydroid is already installed!
+
+      To run Android apps:
+        Gaming Mode: Launch "Waydroid" from your library
+        Desktop Mode: Run "waydroid show-full-ui"
+
+      To reinstall (after SteamOS update wiped it):
+        Run the "Waydroid Installer" on your Desktop
+  when: waydroid_check.stat.exists
+
+# Only proceed if Waydroid is not installed
+- name: Ensure Applications directory exists
+  ansible.builtin.file:
+    path: "{{ deck_home }}/Applications"
+    state: directory
+    mode: '0755'
+  when: not waydroid_check.stat.exists
+
+- name: Ensure Desktop directory exists
+  ansible.builtin.file:
+    path: "{{ deck_home }}/Desktop"
+    state: directory
+    mode: '0755'
+  when: not waydroid_check.stat.exists
+
+# Clone/update the installer
+- name: Clone SteamOS-Waydroid-Installer
+  ansible.builtin.git:
+    repo: https://github.com/ryanrudolfoba/SteamOS-Waydroid-Installer.git
+    dest: "{{ deck_home }}/Applications/SteamOS-Waydroid-Installer"
+    depth: 1
+    force: true
+  when: not waydroid_check.stat.exists
+
+- name: Make installer executable
+  ansible.builtin.file:
+    path: "{{ deck_home }}/Applications/SteamOS-Waydroid-Installer/steamos-waydroid-installer.sh"
+    mode: '0755'
+  when: not waydroid_check.stat.exists
+
+# Create desktop shortcut
+- name: Create Waydroid Installer desktop shortcut
+  ansible.builtin.copy:
+    dest: "{{ deck_home }}/Desktop/Waydroid Installer.desktop"
+    mode: '0755'
+    content: |
+      [Desktop Entry]
+      Name=Waydroid Installer
+      Comment=Install Android on Steam Deck
+      Exec={{ deck_home }}/Applications/SteamOS-Waydroid-Installer/steamos-waydroid-installer.sh
+      Icon=application-x-executable
+      Terminal=true
+      Type=Application
+      Categories=System;
+  when: not waydroid_check.stat.exists
+
+- name: Display Waydroid setup instructions
+  ansible.builtin.debug:
+    msg: |
+      Waydroid Installer ready!
+
+      To install Android:
+      1. Switch to Desktop Mode (if not already)
+      2. Double-click "Waydroid Installer" on your Desktop
+      3. Choose your Android variant:
+         - A13_GAPPS: With Google Play Store (recommended)
+         - A13_NO_GAPPS: Without Google Play Store
+         - TV13_GAPPS: Android TV with Google Play Store
+      4. Wait for installation (downloads ~800MB Android image)
+      5. When prompted, choose whether to return to Gaming Mode
+
+      After installation:
+      - Gaming Mode: Launch "Waydroid" from your library
+      - Desktop Mode: Run "waydroid show-full-ui"
+
+      NOTE: After SteamOS updates, Waydroid will need to be reinstalled.
+      Re-run this playbook and then run the installer again.
+      Your Android apps and data are preserved in ~/.local/share/waydroid/
+  when: not waydroid_check.stat.exists

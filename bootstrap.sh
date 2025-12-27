@@ -130,6 +130,13 @@ install_ansible() {
     # Fall back to pacman
     echo "  Using pacman..."
     sudo steamos-readonly disable 2>/dev/null || true
+
+    # Refresh keyring to avoid PGP signature errors
+    echo "  Refreshing pacman keyring..."
+    sudo pacman-key --init 2>/dev/null || true
+    sudo pacman-key --populate archlinux 2>/dev/null || true
+    sudo pacman -Sy --noconfirm archlinux-keyring 2>/dev/null || true
+
     sudo pacman -S --noconfirm ansible
     sudo steamos-readonly enable 2>/dev/null || true
     echo -e "${GREEN}✓${NC} Ansible installed via pacman"

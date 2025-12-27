@@ -96,6 +96,11 @@
       tags: [emulation, roms, gaming]
       when: install_emudeck | default(false)
 
+    # Waydroid - Android apps on Steam Deck
+    - role: waydroid
+      tags: [waydroid, android]
+      when: install_waydroid | default(false)
+
     # Distrobox apps (password managers with full features)
     - role: distrobox
       tags: [distrobox, containers, password_manager]
@@ -110,5 +115,6 @@
           Next steps:
           - Restart to Gaming Mode to see Decky plugins
           - Run Steam ROM Manager if you installed emulators
+          {% if install_waydroid | default(false) %}- Launch Waydroid from Gaming Mode library{% endif %}
           - Check the README for manual configuration steps
       tags: always

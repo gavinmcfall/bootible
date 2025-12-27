@@ -87,7 +87,7 @@
 - name: Set SD card facts
   ansible.builtin.set_fact:
     sdcard_present: "{{ sdcard_check.stat.exists }}"
-    sdcard_writable: "{{ sdcard_write_test is succeeded if sdcard_check.stat.exists else false }}"
+    sdcard_writable: "{{ (sdcard_write_test is succeeded) if sdcard_check.stat.exists else false }}"
     sdcard_path: "{{ '/run/media/mmcblk0p1' if sdcard_check.stat.exists else '' }}"
 
 - name: Display SD card status
