@@ -48,16 +48,14 @@
     line: "Port {{ ssh_port }}"
     state: present
   when: ssh_port | default(22) != 22
-  notify: Restart SSH
+  register: ssh_port_config
 
-# Handler for restarting SSH (defined inline since we don't have handlers dir)
 - name: Restart SSH if port changed
   become: true
   ansible.builtin.systemd:
     name: sshd
     state: restarted
-  when: ssh_port | default(22) != 22
-  changed_when: false
+  when: ssh_port_config.changed | default(false)
 
 # SSH survives SteamOS updates but the enabled state might reset.
 # Running this playbook after an update will re-enable it.

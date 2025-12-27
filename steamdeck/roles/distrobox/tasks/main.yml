@@ -28,7 +28,9 @@
 # Only run if distrobox install method is selected
 - name: Check if Distrobox installation is needed
   ansible.builtin.set_fact:
-    needs_distrobox: "{{ password_manager_install_method | default('flatpak') == 'distrobox' and password_manager | default('none') != 'none' }}"
+    needs_distrobox: >-
+      {{ password_manager_install_method | default('flatpak') == 'distrobox'
+         and password_manager | default('none') != 'none' }}
 
 - name: Skip Distrobox setup
   ansible.builtin.debug:
@@ -48,7 +50,7 @@
     msg: "Distrobox not found. It should be pre-installed on SteamOS."
   when:
     - needs_distrobox
-    - distrobox_check.rc != 0
+    - distrobox_check.rc | default(1) != 0
 
 # Create Arch Linux container
 - name: Check if Arch container exists
@@ -57,22 +59,48 @@
   changed_when: false
   when:
     - needs_distrobox
-    - distrobox_check.rc == 0
+    - distrobox_check.rc | default(1) == 0
+
+- name: Check if arch container exists specifically
+  ansible.builtin.set_fact:
+    arch_container_exists: >-
+      {{ distrobox_list.stdout_lines | default([])
+         | select('match', '^arch\\s+\\|.*')
+         | list | length > 0
+         or distrobox_list.stdout_lines | default([])
+         | select('search', '\\|\\s*arch\\s*\\|')
+         | list | length > 0 }}
+  when:
+    - needs_distrobox
+    - distrobox_check.rc | default(1) == 0
 
 - name: Create Arch Linux container
   ansible.builtin.command: distrobox create -i archlinux:latest -n arch --yes
+  register: arch_create
   when:
     - needs_distrobox
-    - distrobox_check.rc == 0
-    - "'arch' not in distrobox_list.stdout"
+    - distrobox_check.rc | default(1) == 0
+    - not (arch_container_exists | default(false))
+  changed_when: arch_create.rc == 0
 
 # Install yay (AUR helper) in the container
-- name: Install base-devel and git in Arch container
-  ansible.builtin.command: distrobox enter arch -- sudo pacman -S --needed --noconfirm base-devel git
+- name: Check if base-devel is installed
+  ansible.builtin.command: distrobox enter arch -- pacman -Qi base-devel
+  register: basedev_check
+  changed_when: false
+  failed_when: false
   when:
     - needs_distrobox
-    - distrobox_check.rc == 0
-  changed_when: false
+    - distrobox_check.rc | default(1) == 0
+
+- name: Install base-devel and git in Arch container
+  ansible.builtin.command: distrobox enter arch -- sudo pacman -S --needed --noconfirm base-devel git
+  register: basedev_install
+  when:
+    - needs_distrobox
+    - distrobox_check.rc | default(1) == 0
+    - basedev_check.rc | default(1) != 0
+  changed_when: basedev_install.rc == 0
 
 - name: Check if yay is installed
   ansible.builtin.command: distrobox enter arch -- which yay
@@ -81,24 +109,33 @@
   failed_when: false
   when:
     - needs_distrobox
-    - distrobox_check.rc == 0
+    - distrobox_check.rc | default(1) == 0
+
+- name: Remove old yay build directory
+  ansible.builtin.command: distrobox enter arch -- rm -rf /tmp/yay-bin
+  when:
+    - needs_distrobox
+    - distrobox_check.rc | default(1) == 0
+    - yay_check.rc | default(0) != 0
+  changed_when: false
 
 - name: Clone yay repository
   ansible.builtin.command: distrobox enter arch -- git clone https://aur.archlinux.org/yay-bin.git /tmp/yay-bin
+  register: yay_clone
   when:
     - needs_distrobox
-    - distrobox_check.rc == 0
-    - yay_check.rc != 0
-  changed_when: true
-  failed_when: false
+    - distrobox_check.rc | default(1) == 0
+    - yay_check.rc | default(0) != 0
+  changed_when: yay_clone.rc == 0
 
 - name: Build and install yay
   ansible.builtin.command: distrobox enter arch -- bash -c "cd /tmp/yay-bin && makepkg -si --noconfirm"
+  register: yay_install
   when:
     - needs_distrobox
-    - distrobox_check.rc == 0
-    - yay_check.rc != 0
-  changed_when: true
+    - distrobox_check.rc | default(1) == 0
+    - yay_check.rc | default(0) != 0
+  changed_when: yay_install.rc == 0
 
 # ============================================================================
 # 1Password
@@ -114,11 +151,12 @@
 
 - name: Install 1Password from AUR
   ansible.builtin.command: distrobox enter arch -- yay -S --noconfirm 1password
+  register: onepassword_install
   when:
     - needs_distrobox
     - password_manager == '1password'
-    - onepassword_check.rc != 0
-  changed_when: true
+    - onepassword_check.rc | default(1) != 0
+  changed_when: onepassword_install.rc == 0
 
 - name: Export 1Password to host desktop
   ansible.builtin.command: distrobox enter arch -- distrobox-export --app 1password
@@ -142,11 +180,12 @@
 
 - name: Install Bitwarden from AUR
   ansible.builtin.command: distrobox enter arch -- yay -S --noconfirm bitwarden-desktop
+  register: bitwarden_install
   when:
     - needs_distrobox
     - password_manager == 'bitwarden'
-    - bitwarden_check.rc != 0
-  changed_when: true
+    - bitwarden_check.rc | default(1) != 0
+  changed_when: bitwarden_install.rc == 0
 
 - name: Export Bitwarden to host desktop
   ansible.builtin.command: distrobox enter arch -- distrobox-export --app bitwarden-desktop
@@ -170,11 +209,12 @@
 
 - name: Install KeePassXC from Arch repos
   ansible.builtin.command: distrobox enter arch -- sudo pacman -S --noconfirm keepassxc
+  register: keepassxc_install
   when:
     - needs_distrobox
     - password_manager == 'keepassxc'
-    - keepassxc_check.rc != 0
-  changed_when: true
+    - keepassxc_check.rc | default(1) != 0
+  changed_when: keepassxc_install.rc == 0
 
 - name: Export KeePassXC to host desktop
   ansible.builtin.command: distrobox enter arch -- distrobox-export --app keepassxc
@@ -198,11 +238,12 @@
 
 - name: Install Proton Pass from AUR
   ansible.builtin.command: distrobox enter arch -- yay -S --noconfirm proton-pass
+  register: protonpass_install
   when:
     - needs_distrobox
     - password_manager == 'protonpass'
-    - protonpass_check.rc != 0
-  changed_when: true
+    - protonpass_check.rc | default(1) != 0
+  changed_when: protonpass_install.rc == 0
 
 - name: Export Proton Pass to host desktop
   ansible.builtin.command: distrobox enter arch -- distrobox-export --app proton-pass

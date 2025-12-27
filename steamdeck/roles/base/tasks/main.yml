@@ -35,23 +35,16 @@
 # ----------------------
 # Sets the system hostname if specified in config
 
-- name: Get current hostname
-  ansible.builtin.command: hostnamectl --static
-  register: current_hostname
-  changed_when: false
-  when: hostname | default('') | length > 0
-
 - name: Set hostname
-  ansible.builtin.command: hostnamectl set-hostname "{{ hostname }}"
+  ansible.builtin.hostname:
+    name: "{{ hostname }}"
   become: true
-  when:
-    - hostname | default('') | length > 0
-    - current_hostname.stdout != hostname
+  when: hostname | default('') | length > 0
   register: hostname_changed
 
 - name: Display hostname change
   ansible.builtin.debug:
-    msg: "Hostname changed: {{ current_hostname.stdout }} → {{ hostname }}"
+    msg: "Hostname set to: {{ hostname }}"
   when:
     - hostname_changed is defined
     - hostname_changed is changed
@@ -61,69 +54,42 @@
 # Configures a static IP via NetworkManager if specified
 
 - name: Configure static IP
+  community.general.nmcli:
+    conn_name: "{{ static_ip.connection }}"
+    type: ethernet
+    ip4: "{{ static_ip.address }}"
+    gw4: "{{ static_ip.gateway }}"
+    dns4: "{{ static_ip.dns | default([]) | select() | list }}"
+    method4: manual
+    state: present
+    autoconnect: true
+  become: true
+  register: static_ip_config
   when:
     - static_ip.enabled | default(false)
     - static_ip.address | default('') | length > 0
     - static_ip.gateway | default('') | length > 0
-  block:
-    - name: Get current connection settings
-      ansible.builtin.command: nmcli -g ipv4.method con show "{{ static_ip.connection }}"
-      register: current_ip_method
-      changed_when: false
-      failed_when: false
 
-    - name: Set static IP address
-      ansible.builtin.command: >
-        nmcli con mod "{{ static_ip.connection }}"
-        ipv4.method manual
-        ipv4.addresses "{{ static_ip.address }}"
-        ipv4.gateway "{{ static_ip.gateway }}"
-      become: true
-      when: current_ip_method.stdout != 'manual' or true
-      register: static_ip_set
-
-    - name: Set DNS servers
-      ansible.builtin.command: >
-        nmcli con mod "{{ static_ip.connection }}"
-        ipv4.dns "{{ static_ip.dns | select() | join(',') }}"
-      become: true
-      when:
-        - static_ip.dns | default([]) | select() | list | length > 0
-        - static_ip_set is succeeded
-
-    - name: Restart connection to apply changes
-      ansible.builtin.shell: |
-        nmcli con down "{{ static_ip.connection }}" 2>/dev/null || true
-        sleep 2
-        nmcli con up "{{ static_ip.connection }}"
-      become: true
-      when: static_ip_set is changed
-
-    - name: Display static IP configuration
-      ansible.builtin.debug:
-        msg: |
-          Static IP configured:
-            Connection: {{ static_ip.connection }}
-            Address: {{ static_ip.address }}
-            Gateway: {{ static_ip.gateway }}
-            DNS: {{ static_ip.dns | default([]) | select() | join(', ') }}
-      when: static_ip_set is changed
+- name: Display static IP configuration
+  ansible.builtin.debug:
+    msg: |
+      Static IP configured:
+        Connection: {{ static_ip.connection }}
+        Address: {{ static_ip.address }}
+        Gateway: {{ static_ip.gateway }}
+        DNS: {{ static_ip.dns | default([]) | select() | join(', ') }}
+  when: static_ip_config is defined and static_ip_config is changed
 
 # Flathub Setup
 # -------------
 # Flathub is the main source for Flatpak applications.
 # Should be enabled by default on SteamOS, but we ensure it's there.
 
-- name: Check if Flathub remote exists
-  ansible.builtin.command: flatpak remote-list --columns=name
-  register: flatpak_remotes
-  changed_when: false
-
 - name: Add Flathub repository
-  ansible.builtin.command: >
-    flatpak remote-add --if-not-exists flathub
-    https://flathub.org/repo/flathub.flatpakrepo
-  when: "'flathub' not in flatpak_remotes.stdout"
+  community.general.flatpak_remote:
+    name: flathub
+    flatpakrepo_url: https://flathub.org/repo/flathub.flatpakrepo
+    state: present
 
 # Update existing Flatpaks
 # ------------------------

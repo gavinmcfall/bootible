@@ -144,9 +144,12 @@
   when: private_emudeck_desktop.files | default([]) | length == 0
 
 - name: Set EmuDeck desktop file source
+  vars:
+    private_files: "{{ private_emudeck_desktop.files | default([]) }}"
+    fallback_files: "{{ local_emudeck_desktop_fallback.files | default([]) }}"
   ansible.builtin.set_fact:
     local_emudeck_desktop:
-      files: "{{ private_emudeck_desktop.files if (private_emudeck_desktop.files | default([]) | length > 0) else (local_emudeck_desktop_fallback.files | default([])) }}"
+      files: "{{ private_files if (private_files | length > 0) else fallback_files }}"
 
 - name: Check for EmuDeck AppImage in private overlay
   ansible.builtin.find:
@@ -165,9 +168,12 @@
   when: private_emudeck_appimage.files | default([]) | length == 0
 
 - name: Set EmuDeck AppImage source
+  vars:
+    private_files: "{{ private_emudeck_appimage.files | default([]) }}"
+    fallback_files: "{{ local_emudeck_appimage_fallback.files | default([]) }}"
   ansible.builtin.set_fact:
     local_emudeck_appimage:
-      files: "{{ private_emudeck_appimage.files if (private_emudeck_appimage.files | default([]) | length > 0) else (local_emudeck_appimage_fallback.files | default([])) }}"
+      files: "{{ private_files if (private_files | length > 0) else fallback_files }}"
 
 # Use local desktop file if available (Patreon .desktop.download)
 - name: Copy local EmuDeck desktop file

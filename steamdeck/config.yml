@@ -29,6 +29,17 @@ static_ip:
     # - ""          # e.g., "8.8.4.4"
 
 # =============================================================================
+# API SETTINGS
+# =============================================================================
+# GitHub API rate limits anonymous requests to 60/hour. If you hit rate limits
+# (e.g., installing many Decky plugins), add a personal access token.
+# Create one at: https://github.com/settings/tokens (no scopes needed for public repos)
+#
+# SECURITY: Put this in your private config (private/steamdeck/config.yml),
+# not here in the public repo!
+github_token: ""
+
+# =============================================================================
 # DESKTOP APPLICATIONS (Flatpak)
 # =============================================================================
 # Apps installed via Flatpak from Flathub. These survive SteamOS updates.

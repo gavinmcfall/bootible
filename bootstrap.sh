@@ -123,6 +123,11 @@ install_ansible() {
         export PATH="$HOME/.local/bin:$PATH"
         if command -v ansible-playbook &> /dev/null; then
             echo -e "${GREEN}✓${NC} Ansible installed via pip"
+            # Persist PATH for future sessions if not already in bashrc
+            if [[ -f "$HOME/.bashrc" ]] && ! grep -q '$HOME/.local/bin' "$HOME/.bashrc"; then
+                echo 'export PATH="$HOME/.local/bin:$PATH"' >> "$HOME/.bashrc"
+                echo -e "${GREEN}✓${NC} Added ~/.local/bin to PATH in .bashrc"
+            fi
             return 0
         fi
     fi

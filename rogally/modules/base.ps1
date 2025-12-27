@@ -49,14 +49,21 @@ if ($staticIpEnabled) {
         try {
             # Get the network adapter
             $netAdapter = Get-NetAdapter -Name $adapter -ErrorAction Stop
+            $interfaceIndex = $netAdapter.ifIndex
 
-            # Remove existing IP configuration
-            $netAdapter | Remove-NetIPAddress -Confirm:$false -ErrorAction SilentlyContinue
-            $netAdapter | Remove-NetRoute -Confirm:$false -ErrorAction SilentlyContinue
+            # Check if already configured correctly
+            $currentIP = Get-NetIPAddress -InterfaceIndex $interfaceIndex -AddressFamily IPv4 -ErrorAction SilentlyContinue
+            if ($currentIP.IPAddress -eq $address) {
+                Write-Status "Static IP already configured: $address" "Success"
+            } else {
+                # Remove existing IP configuration
+                $netAdapter | Remove-NetIPAddress -Confirm:$false -ErrorAction SilentlyContinue
+                $netAdapter | Remove-NetRoute -Confirm:$false -ErrorAction SilentlyContinue
 
-            # Set static IP
-            $netAdapter | New-NetIPAddress -IPAddress $address -PrefixLength $prefixLength -DefaultGateway $gateway -ErrorAction Stop
-            Write-Status "Static IP set: $address/$prefixLength (gateway: $gateway)" "Success"
+                # Set static IP
+                $null = $netAdapter | New-NetIPAddress -IPAddress $address -PrefixLength $prefixLength -DefaultGateway $gateway -ErrorAction Stop
+                Write-Status "Static IP set: $address/$prefixLength (gateway: $gateway)" "Success"
+            }
 
             # Set DNS servers
             if ($dnsServers -and $dnsServers.Count -gt 0) {
@@ -65,6 +72,15 @@ if ($staticIpEnabled) {
             }
         } catch {
             Write-Status "Failed to configure static IP: $_" "Error"
+            Write-Status "Attempting to restore DHCP..." "Warning"
+            try {
+                # Restore DHCP if static IP failed
+                Set-NetIPInterface -InterfaceAlias $adapter -Dhcp Enabled -ErrorAction SilentlyContinue
+                Set-DnsClientServerAddress -InterfaceAlias $adapter -ResetServerAddresses -ErrorAction SilentlyContinue
+                Write-Status "DHCP restored on '$adapter'" "Info"
+            } catch {
+                Write-Status "Could not restore DHCP: $_" "Error"
+            }
         }
     } else {
         Write-Status "Static IP enabled but missing required values (adapter, address, gateway)" "Warning"

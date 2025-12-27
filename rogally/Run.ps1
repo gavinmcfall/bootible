@@ -118,12 +118,15 @@ function Import-YamlConfig {
         return @{}
     }
 
-    # Simple YAML parser for flat/nested configs
+    # Simple YAML parser for flat/nested configs with list support
+    # Supports 2-space, 4-space, or tab indentation
     $config = @{}
     $content = Get-Content $Path -Raw
     $lines = $content -split "`n"
     $currentSection = $null
     $currentSubSection = $null
+    $currentListKey = $null
+    $currentListLevel = 0  # 1 = section level, 2 = subsection level
 
     foreach ($line in $lines) {
         # Skip comments and empty lines
@@ -131,27 +134,56 @@ function Import-YamlConfig {
             continue
         }
 
-        # Top-level key with value
-        if ($line -match '^(\w+):\s*(.+)$') {
+        # Calculate indent level (normalize tabs to 2 spaces)
+        $normalizedLine = $line -replace "`t", "  "
+        $indent = 0
+        if ($normalizedLine -match '^(\s*)') {
+            $indent = $Matches[1].Length
+        }
+
+        # List item (starts with -)
+        if ($normalizedLine -match '^\s*-\s*(.*)$') {
+            $listValue = $Matches[1].Trim().Trim('"').Trim("'")
+
+            # Convert string booleans
+            if ($listValue -eq 'true') { $listValue = $true }
+            elseif ($listValue -eq 'false') { $listValue = $false }
+
+            # Skip empty list items
+            if ($listValue -eq '') { continue }
+
+            # Add to appropriate list based on where we are
+            if ($currentListKey -and $currentListLevel -eq 2 -and $currentSection -and $currentSubSection) {
+                $config[$currentSection][$currentSubSection] += @($listValue)
+            }
+            elseif ($currentListKey -and $currentListLevel -eq 1 -and $currentSection) {
+                $config[$currentSection][$currentListKey] += @($listValue)
+            }
+            continue
+        }
+
+        # Top-level key with value (no indent)
+        if ($indent -eq 0 -and $normalizedLine -match '^(\w+):\s*(.+)$') {
             $key = $Matches[1]
             $value = $Matches[2].Trim().Trim('"').Trim("'")
 
-            # Convert string booleans
             if ($value -eq 'true') { $value = $true }
             elseif ($value -eq 'false') { $value = $false }
 
             $config[$key] = $value
             $currentSection = $null
             $currentSubSection = $null
+            $currentListKey = $null
         }
-        # Section header (no value after colon)
-        elseif ($line -match '^(\w+):\s*$') {
+        # Section header (no value after colon, no indent)
+        elseif ($indent -eq 0 -and $normalizedLine -match '^(\w+):\s*$') {
             $currentSection = $Matches[1]
             $config[$currentSection] = @{}
             $currentSubSection = $null
+            $currentListKey = $null
         }
-        # Nested key-value (2-space indent)
-        elseif ($line -match '^  (\w+):\s*(.+)$' -and $currentSection) {
+        # Nested key-value (indent level 1: 2-4 spaces)
+        elseif ($indent -ge 2 -and $indent -le 4 -and $normalizedLine -match '^\s+(\w+):\s*(.+)$' -and $currentSection -and -not $currentSubSection) {
             $key = $Matches[1]
             $value = $Matches[2].Trim().Trim('"').Trim("'")
 
@@ -159,14 +191,35 @@ function Import-YamlConfig {
             elseif ($value -eq 'false') { $value = $false }
 
             $config[$currentSection][$key] = $value
+            $currentListKey = $null
         }
-        # Sub-section header (2-space indent, no value)
-        elseif ($line -match '^  (\w+):\s*$' -and $currentSection) {
+        # List key at section level (indent level 1, no value - starts a list)
+        elseif ($indent -ge 2 -and $indent -le 4 -and $normalizedLine -match '^\s+(\w+):\s*$' -and $currentSection -and -not $currentSubSection) {
+            $key = $Matches[1]
+            # Could be a subsection or a list - we'll find out from next line
+            # For now, initialize as empty array (lists) - will be converted to hashtable if needed
+            $config[$currentSection][$key] = @()
+            $currentListKey = $key
+            $currentListLevel = 1
+            $currentSubSection = $null
+        }
+        # Sub-section header or nested key (indent level 2: 4-6 spaces)
+        elseif ($indent -ge 4 -and $indent -le 6 -and $normalizedLine -match '^\s+(\w+):\s*$' -and $currentSection) {
+            # This is a subsection under the current section
             $currentSubSection = $Matches[1]
-            $config[$currentSection][$currentSubSection] = @{}
+            # If parent was an empty array, convert to hashtable
+            if ($currentListKey -and $config[$currentSection][$currentListKey] -is [array] -and $config[$currentSection][$currentListKey].Count -eq 0) {
+                $config[$currentSection][$currentListKey] = @{}
+            }
+            if ($currentListKey) {
+                $config[$currentSection][$currentListKey][$currentSubSection] = @()
+                $currentListLevel = 2
+            } else {
+                $config[$currentSection][$currentSubSection] = @{}
+            }
         }
-        # Sub-nested key-value (4-space indent)
-        elseif ($line -match '^    (\w+):\s*(.+)$' -and $currentSection -and $currentSubSection) {
+        # Sub-nested key-value (indent level 2: 4-6 spaces)
+        elseif ($indent -ge 4 -and $indent -le 6 -and $normalizedLine -match '^\s+(\w+):\s*(.+)$' -and $currentSection -and $currentSubSection) {
             $key = $Matches[1]
             $value = $Matches[2].Trim().Trim('"').Trim("'")
 
@@ -174,6 +227,7 @@ function Import-YamlConfig {
             elseif ($value -eq 'false') { $value = $false }
 
             $config[$currentSection][$currentSubSection][$key] = $value
+            $currentListKey = $null
         }
     }
 

@@ -59,7 +59,8 @@
   when: not waydroid_check.stat.exists
 
 # Clone/update the installer
-- name: Clone SteamOS-Waydroid-Installer
+# We intentionally use latest - installer updates for new SteamOS kernel versions
+- name: Clone SteamOS-Waydroid-Installer  # noqa: latest[git]
   ansible.builtin.git:
     repo: https://github.com/ryanrudolfoba/SteamOS-Waydroid-Installer.git
     dest: "{{ deck_home }}/Applications/SteamOS-Waydroid-Installer"

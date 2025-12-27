@@ -45,7 +45,9 @@
 
     - name: Note configuration source
       ansible.builtin.debug:
-        msg: "{{ 'Using private configuration from private/steamdeck/config.yml' if private_config.stat.exists else 'Using default configuration from config.yml' }}"
+        msg: >-
+          {{ 'Using private config from private/steamdeck/config.yml'
+          if private_config.stat.exists else 'Using default config.yml' }}
       tags: always
 
     # Set private files path for roles to use
