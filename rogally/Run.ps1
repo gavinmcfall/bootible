@@ -288,10 +288,10 @@ function Install-WingetPackage {
 # ============================================================================
 
 Write-Host ""
-Write-Host "╔════════════════════════════════════════════════════════════╗" -ForegroundColor Cyan
-Write-Host "║                      Bootible                              ║" -ForegroundColor White
-Write-Host "║             ROG Ally X Configuration                       ║" -ForegroundColor Gray
-Write-Host "╚════════════════════════════════════════════════════════════╝" -ForegroundColor Cyan
+Write-Host "+------------------------------------------------------------+" -ForegroundColor Cyan
+Write-Host "|                      Bootible                              |" -ForegroundColor White
+Write-Host "|             ROG Ally X Configuration                       |" -ForegroundColor Gray
+Write-Host "+------------------------------------------------------------+" -ForegroundColor Cyan
 Write-Host ""
 
 # Verify running on Windows
@@ -446,15 +446,15 @@ $networkInfo = Get-NetworkSummary
 # Complete
 Write-Host ""
 if ($Script:DryRun) {
-    Write-Host "╔════════════════════════════════════════════════════════════╗" -ForegroundColor Yellow
-    Write-Host "║                   DRY RUN COMPLETE                         ║" -ForegroundColor White
-    Write-Host "╚════════════════════════════════════════════════════════════╝" -ForegroundColor Yellow
+    Write-Host "+------------------------------------------------------------+" -ForegroundColor Yellow
+    Write-Host "|                   DRY RUN COMPLETE                         |" -ForegroundColor White
+    Write-Host "+------------------------------------------------------------+" -ForegroundColor Yellow
     Write-Host ""
     Write-Host "No changes were made. Run without -DryRun to apply changes." -ForegroundColor Yellow
 } else {
-    Write-Host "╔════════════════════════════════════════════════════════════╗" -ForegroundColor Green
-    Write-Host "║                   Setup Complete!                          ║" -ForegroundColor White
-    Write-Host "╚════════════════════════════════════════════════════════════╝" -ForegroundColor Green
+    Write-Host "+------------------------------------------------------------+" -ForegroundColor Green
+    Write-Host "|                   Setup Complete!                          |" -ForegroundColor White
+    Write-Host "+------------------------------------------------------------+" -ForegroundColor Green
 }
 
 Write-Host ""
@@ -468,9 +468,9 @@ Write-Host ""
 
 if (-not $Script:DryRun) {
     Write-Host "Next steps:" -ForegroundColor Yellow
-    Write-Host "  • Restart your device to apply all changes"
-    Write-Host "  • Configure Armoury Crate for performance profiles"
-    Write-Host "  • Set up game streaming apps (Moonlight, Chiaki, etc.)"
-    Write-Host "  • Check README for additional configuration"
+    Write-Host "  - Restart your device to apply all changes"
+    Write-Host "  - Configure Armoury Crate for performance profiles"
+    Write-Host "  - Set up game streaming apps (Moonlight, Chiaki, etc.)"
+    Write-Host "  - Check README for additional configuration"
     Write-Host ""
 }

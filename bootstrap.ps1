@@ -489,9 +489,9 @@ function Main {
 
         switch ($Device) {
             "rogally" {
-                Write-Host "  • Restart your device to apply all changes"
-                Write-Host "  • Configure Armoury Crate for performance profiles"
-                Write-Host "  • Set up game streaming apps if installed"
+                Write-Host "  - Restart your device to apply all changes"
+                Write-Host "  - Configure Armoury Crate for performance profiles"
+                Write-Host "  - Set up game streaming apps if installed"
             }
         }
         Write-Host ""

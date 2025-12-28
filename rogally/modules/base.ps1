@@ -18,7 +18,7 @@ $desiredHostname = Get-ConfigValue "hostname" ""
 if ($desiredHostname -and $desiredHostname -ne "") {
     $currentHostname = $env:COMPUTERNAME
     if ($currentHostname -ne $desiredHostname) {
-        Write-Status "Setting hostname: $currentHostname → $desiredHostname" "Info"
+        Write-Status "Setting hostname: $currentHostname -> $desiredHostname" "Info"
         try {
             Rename-Computer -NewName $desiredHostname -Force -ErrorAction Stop
             Write-Status "Hostname changed to '$desiredHostname' (restart required)" "Success"
