@@ -370,15 +370,69 @@ foreach ($moduleName in $moduleOrder) {
     }
 }
 
+# Gather system information for summary
+function Get-NetworkSummary {
+    try {
+        # Get the default network adapter (the one with a default gateway)
+        $defaultAdapter = Get-NetRoute -DestinationPrefix '0.0.0.0/0' -ErrorAction SilentlyContinue |
+            Sort-Object RouteMetric |
+            Select-Object -First 1
+
+        if ($defaultAdapter) {
+            $adapter = Get-NetAdapter -InterfaceIndex $defaultAdapter.InterfaceIndex -ErrorAction SilentlyContinue
+            $ipConfig = Get-NetIPAddress -InterfaceIndex $defaultAdapter.InterfaceIndex -AddressFamily IPv4 -ErrorAction SilentlyContinue |
+                Select-Object -First 1
+            $dhcpEnabled = (Get-NetIPInterface -InterfaceIndex $defaultAdapter.InterfaceIndex -AddressFamily IPv4 -ErrorAction SilentlyContinue).Dhcp -eq 'Enabled'
+
+            return @{
+                IPAddress = $ipConfig.IPAddress
+                IPType = if ($dhcpEnabled) { "DHCP" } else { "Static" }
+                MACAddress = $adapter.MacAddress
+                Interface = $adapter.Name
+            }
+        }
+    } catch {
+        # Silently handle errors
+    }
+
+    return @{
+        IPAddress = "Unknown"
+        IPType = "Unknown"
+        MACAddress = "Unknown"
+        Interface = "Unknown"
+    }
+}
+
+$networkInfo = Get-NetworkSummary
+
 # Complete
 Write-Host ""
-Write-Host "╔════════════════════════════════════════════════════════════╗" -ForegroundColor Green
-Write-Host "║                   Setup Complete!                          ║" -ForegroundColor White
-Write-Host "╚════════════════════════════════════════════════════════════╝" -ForegroundColor Green
+if ($Script:DryRun) {
+    Write-Host "╔════════════════════════════════════════════════════════════╗" -ForegroundColor Yellow
+    Write-Host "║                   DRY RUN COMPLETE                         ║" -ForegroundColor White
+    Write-Host "╚════════════════════════════════════════════════════════════╝" -ForegroundColor Yellow
+    Write-Host ""
+    Write-Host "No changes were made. Run without -DryRun to apply changes." -ForegroundColor Yellow
+} else {
+    Write-Host "╔════════════════════════════════════════════════════════════╗" -ForegroundColor Green
+    Write-Host "║                   Setup Complete!                          ║" -ForegroundColor White
+    Write-Host "╚════════════════════════════════════════════════════════════╝" -ForegroundColor Green
+}
+
 Write-Host ""
-Write-Host "Next steps:" -ForegroundColor Yellow
-Write-Host "  • Restart your device to apply all changes"
-Write-Host "  • Configure Armoury Crate for performance profiles"
-Write-Host "  • Set up game streaming apps (Moonlight, Chiaki, etc.)"
-Write-Host "  • Check README for additional configuration"
+Write-Host "System Information:" -ForegroundColor Cyan
+Write-Host "  Hostname:    $env:COMPUTERNAME"
+Write-Host "  IP Address:  $($networkInfo.IPAddress)"
+Write-Host "  IP Type:     $($networkInfo.IPType)"
+Write-Host "  MAC Address: $($networkInfo.MACAddress)"
+Write-Host "  Interface:   $($networkInfo.Interface)"
 Write-Host ""
+
+if (-not $Script:DryRun) {
+    Write-Host "Next steps:" -ForegroundColor Yellow
+    Write-Host "  • Restart your device to apply all changes"
+    Write-Host "  • Configure Armoury Crate for performance profiles"
+    Write-Host "  • Set up game streaming apps (Moonlight, Chiaki, etc.)"
+    Write-Host "  • Check README for additional configuration"
+    Write-Host ""
+}

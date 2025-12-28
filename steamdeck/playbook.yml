@@ -114,14 +114,88 @@
       when: password_manager_install_method | default('flatpak') == 'distrobox'
 
   post_tasks:
-    - name: Setup complete
+    # Gather network information for summary
+    - name: Get default network interface
+      ansible.builtin.shell: |
+        set -o pipefail
+        ip route | grep default | awk '{print $5}' | head -1
+      args:
+        executable: /bin/bash
+      register: default_interface
+      changed_when: false
+      tags: always
+
+    - name: Get IP address
+      ansible.builtin.shell: |
+        set -o pipefail
+        ip addr show {{ default_interface.stdout }} | grep 'inet ' | awk '{print $2}' | cut -d/ -f1
+      args:
+        executable: /bin/bash
+      register: current_ip
+      changed_when: false
+      when: default_interface.stdout | length > 0
+      tags: always
+
+    - name: Get MAC address
+      ansible.builtin.shell: |
+        set -o pipefail
+        ip link show {{ default_interface.stdout }} | grep ether | awk '{print $2}'
+      args:
+        executable: /bin/bash
+      register: mac_address
+      changed_when: false
+      when: default_interface.stdout | length > 0
+      tags: always
+
+    - name: Check if using DHCP or static IP
+      ansible.builtin.shell: |
+        set -o pipefail
+        nmcli -t -f NAME,DEVICE con show --active | grep {{ default_interface.stdout }} | cut -d: -f1
+      args:
+        executable: /bin/bash
+      register: connection_name
+      changed_when: false
+      when: default_interface.stdout | length > 0
+      tags: always
+
+    - name: Get IP configuration method
+      ansible.builtin.shell: |
+        nmcli -t -f ipv4.method con show "{{ connection_name.stdout }}"
+      register: ip_method
+      changed_when: false
+      when: connection_name.stdout | default('') | length > 0
+      tags: always
+
+    - name: Display system summary
+      vars:
+        ip_type: >-
+          {{ 'Static' if 'manual' in (ip_method.stdout | default('')) else 'DHCP' }}
       ansible.builtin.debug:
         msg: |
-          Steam Deck setup complete!
+          {% if ansible_check_mode %}
+          ══════════════════════════════════════════════════════════
+                              DRY RUN COMPLETE
+          ══════════════════════════════════════════════════════════
+          No changes were made. Run without --check to apply changes.
 
+          {% else %}
+          ══════════════════════════════════════════════════════════
+                            SETUP COMPLETE
+          ══════════════════════════════════════════════════════════
+          {% endif %}
+          System Information:
+            Hostname:    {{ ansible_hostname }}
+            IP Address:  {{ current_ip.stdout | default('Unknown') }}
+            IP Type:     {{ ip_type }}
+            MAC Address: {{ mac_address.stdout | default('Unknown') }}
+            Interface:   {{ default_interface.stdout | default('Unknown') }}
+
+          {% if not ansible_check_mode %}
           Next steps:
-          - Restart to Gaming Mode to see Decky plugins
-          - Run Steam ROM Manager if you installed emulators
-          {% if install_waydroid | default(false) %}- Launch Waydroid from Gaming Mode library{% endif %}
-          - Check the README for manual configuration steps
+            - Restart to Gaming Mode to see Decky plugins
+            - Run Steam ROM Manager if you installed emulators
+          {% if install_waydroid | default(false) %}  - Launch Waydroid from Gaming Mode library
+          {% endif %}
+            - Check the README for manual configuration steps
+          {% endif %}
       tags: always

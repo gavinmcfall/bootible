@@ -34,6 +34,7 @@ Bootible automates the setup of gaming handhelds with:
 | Streaming | Moonlight, Chiaki, Greenlight | Moonlight, Chiaki, Parsec |
 | Remote Access | SSH, Tailscale, Sunshine | Tailscale, RDP |
 | Emulation | EmuDeck | RetroArch, standalone emulators |
+| Controller | StickDeck (use Deck as PC gamepad) | - |
 | Optimization | SD card, shader cache | Windows gaming tweaks |
 
 ## Project Structure
@@ -110,6 +111,12 @@ cd steamdeck
 ansible-playbook playbook.yml --ask-become-pass
 ```
 
+**Dry run (preview changes without applying):**
+```bash
+cd steamdeck
+ansible-playbook playbook.yml --check
+```
+
 ### ROG Ally X
 
 See [rogally/](rogally/) for:
@@ -123,6 +130,30 @@ See [rogally/](rogally/) for:
 cd rogally
 .\Run.ps1
 ```
+
+**Dry run (preview changes without applying):**
+```powershell
+cd rogally
+.\Run.ps1 -DryRun
+```
+
+## Dry Run Mode
+
+Both platforms support a dry run mode that previews changes without applying them. At the end of any run (dry or real), a system summary is displayed:
+
+```
+System Information:
+  Hostname:    steamdeck
+  IP Address:  192.168.1.100
+  IP Type:     DHCP
+  MAC Address: aa:bb:cc:dd:ee:ff
+  Interface:   wlan0
+```
+
+This is useful for:
+- Verifying network configuration before/after changes
+- Documenting your device's current state
+- Troubleshooting connectivity issues
 
 ## Re-running / Updating
 

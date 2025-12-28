@@ -50,7 +50,7 @@
   when: ssh_port | default(22) != 22
   register: ssh_port_config
 
-- name: Restart SSH if port changed
+- name: Restart SSH if port changed  # noqa: no-handler
   become: true
   ansible.builtin.systemd:
     name: sshd
