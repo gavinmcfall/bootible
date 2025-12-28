@@ -104,9 +104,25 @@ function Clone-Bootible {
 }
 
 function Setup-Private {
+    # Check if already set via environment variable
+    if (-not $PrivateRepo) {
+        Write-Host ""
+        $response = Read-Host "Do you have a private config repo? (y/N)"
+        if ($response -match "^[Yy]") {
+            Write-Host "Enter GitHub repo (e.g., " -NoNewline
+            Write-Host "username/repo" -ForegroundColor Yellow -NoNewline
+            Write-Host "): " -NoNewline
+            $repoPath = Read-Host
+            if ($repoPath) {
+                $script:PrivateRepo = "https://github.com/$repoPath.git"
+            }
+        }
+    }
+
     if ($PrivateRepo) {
         $privatePath = Join-Path $BootibleDir "private"
         Write-Status "Setting up private configuration..." "Info"
+        Write-Status "Repo: $PrivateRepo" "Info"
 
         if (Test-Path (Join-Path $privatePath ".git")) {
             Push-Location $privatePath
