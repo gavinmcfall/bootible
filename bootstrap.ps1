@@ -442,28 +442,31 @@ function Save-DryRunLog {
         # Push to git
         $gitExe = Find-GitExe
         if ($gitExe) {
-            try {
-                Push-Location $privatePath
-                # Ensure git identity is configured for commit
-                $userName = & $gitExe config user.name 2>$null
-                if (-not $userName) {
-                    if ($Script:GitHubUser) {
-                        & $gitExe config user.name $Script:GitHubUser 2>$null
-                        & $gitExe config user.email "$Script:GitHubUser@users.noreply.github.com" 2>$null
-                    } else {
-                        & $gitExe config user.name "Bootible" 2>$null
-                        & $gitExe config user.email "bootible@localhost" 2>$null
-                    }
+            Push-Location $privatePath
+
+            # Ensure git identity is configured for commit
+            $userName = & $gitExe config user.name 2>$null
+            if (-not $userName) {
+                if ($Script:GitHubUser) {
+                    & $gitExe config user.name $Script:GitHubUser 2>$null
+                    & $gitExe config user.email "$Script:GitHubUser@users.noreply.github.com" 2>$null
+                } else {
+                    & $gitExe config user.name "Bootible" 2>$null
+                    & $gitExe config user.email "bootible@localhost" 2>$null
                 }
-                & $gitExe add "logs/$Device/$logFileName" 2>$null
-                & $gitExe commit -m "log: $Device dry run $(Get-Date -Format 'yyyy-MM-dd HH:mm')" 2>$null
-                $null = & $gitExe push 2>&1
-                Write-Status "Log pushed to private repo" "Success"
-                Pop-Location
-            } catch {
-                Pop-Location
-                Write-Status "Could not push log to remote" "Warning"
             }
+
+            & $gitExe add "logs/$Device/$logFileName" 2>$null
+            & $gitExe commit -m "log: $Device dry run $(Get-Date -Format 'yyyy-MM-dd HH:mm')" 2>$null
+            & $gitExe push 2>$null
+
+            if ($LASTEXITCODE -eq 0) {
+                Write-Status "Log pushed to private repo" "Success"
+            } else {
+                Write-Status "Could not push log (exit code: $LASTEXITCODE)" "Warning"
+            }
+
+            Pop-Location
         }
     }
 }
