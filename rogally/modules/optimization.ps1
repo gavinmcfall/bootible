@@ -253,5 +253,108 @@ if (Get-ConfigValue "steam_start_big_picture" $true) {
     }
 }
 
+# =============================================================================
+# SYSTEM MAINTENANCE
+# =============================================================================
+
+# Disk Cleanup
+# ------------
+# Removes temporary files, system cache, and Windows Update cleanup
+# Can recover 10-20GB of space
+
+if (Get-ConfigValue "run_disk_cleanup" $false) {
+    Write-Status "Running Disk Cleanup..." "Info"
+
+    if (-not $Script:DryRun) {
+        try {
+            # Set cleanup flags in registry for automated cleanup
+            $cleanupPath = "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\VolumeCaches"
+            $categories = @(
+                "Temporary Files",
+                "Temporary Setup Files",
+                "Old ChkDsk Files",
+                "Setup Log Files",
+                "System error memory dump files",
+                "System error minidump files",
+                "Windows Error Reporting Files",
+                "Windows Upgrade Log Files",
+                "Thumbnail Cache",
+                "Update Cleanup",
+                "Windows Defender"
+            )
+
+            foreach ($category in $categories) {
+                $catPath = Join-Path $cleanupPath $category
+                if (Test-Path $catPath) {
+                    Set-ItemProperty -Path $catPath -Name "StateFlags0100" -Value 2 -Type DWord -ErrorAction SilentlyContinue
+                }
+            }
+
+            # Run cleanup with saved settings
+            Start-Process -FilePath "cleanmgr.exe" -ArgumentList "/sagerun:100" -Wait -ErrorAction Stop
+            Write-Status "Disk Cleanup complete" "Success"
+        } catch {
+            Write-Status "Disk Cleanup failed: $_" "Warning"
+        }
+    } else {
+        Write-Status "[DRY RUN] Would run Disk Cleanup" "Info"
+    }
+}
+
+# Time Sync
+# ---------
+# Ensures accurate system time (fixes Xbox Game Pass authentication issues)
+
+if (Get-ConfigValue "force_time_sync" $true) {
+    Write-Status "Synchronizing system time..." "Info"
+
+    if (-not $Script:DryRun) {
+        try {
+            # Enable automatic time sync
+            Set-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Services\W32Time\Parameters" -Name "Type" -Value "NTP" -ErrorAction SilentlyContinue
+
+            # Start Windows Time service if not running
+            $timeService = Get-Service -Name "W32Time" -ErrorAction SilentlyContinue
+            if ($timeService.Status -ne "Running") {
+                Start-Service -Name "W32Time" -ErrorAction SilentlyContinue
+            }
+
+            # Force time resync
+            w32tm /resync /force 2>&1 | Out-Null
+            Write-Status "Time synchronized" "Success"
+        } catch {
+            Write-Status "Time sync failed: $_" "Warning"
+        }
+    } else {
+        Write-Status "[DRY RUN] Would sync system time" "Info"
+    }
+}
+
+# Battery Health Report
+# ---------------------
+# Generates detailed battery health report (useful for diagnostics)
+
+if (Get-ConfigValue "generate_battery_report" $false) {
+    Write-Status "Generating battery health report..." "Info"
+
+    if (-not $Script:DryRun) {
+        try {
+            $reportPath = Join-Path $env:USERPROFILE "Desktop\battery-report.html"
+            powercfg /batteryreport /output $reportPath 2>&1 | Out-Null
+
+            if (Test-Path $reportPath) {
+                Write-Status "Battery report saved to Desktop" "Success"
+                Write-Status "Open battery-report.html to view battery health" "Info"
+            } else {
+                Write-Status "Battery report generation failed" "Warning"
+            }
+        } catch {
+            Write-Status "Could not generate battery report: $_" "Warning"
+        }
+    } else {
+        Write-Status "[DRY RUN] Would generate battery report on Desktop" "Info"
+    }
+}
+
 Write-Status "Optimization complete" "Success"
 Write-Status "Some changes require a restart to take effect" "Warning"

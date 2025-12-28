@@ -319,8 +319,10 @@ if (-not (Test-WingetInstalled)) {
 Write-Status "Winget available" "Success"
 
 # Load configuration
+# Priority: -ConfigFile > private repo > local ~/.config > defaults
 $defaultConfig = Join-Path $Script:DeviceRoot "config.yml"
 $privateConfig = Join-Path $Script:BootibleRoot "private\rogally\config.yml"
+$localConfig = Join-Path $env:USERPROFILE ".config\bootible\rogally\config.yml"
 
 if ($ConfigFile -and (Test-Path $ConfigFile)) {
     $Script:Config = Import-YamlConfig $ConfigFile
@@ -332,7 +334,14 @@ if ($ConfigFile -and (Test-Path $ConfigFile)) {
         Write-Status "Loaded default config" "Info"
     }
 
-    # Merge private config if exists
+    # Merge local config if exists (~/.config/bootible/rogally/config.yml)
+    if (Test-Path $localConfig) {
+        $localSettings = Import-YamlConfig $localConfig
+        $Script:Config = Merge-Configs $Script:Config $localSettings
+        Write-Status "Merged local config: $localConfig" "Info"
+    }
+
+    # Merge private repo config if exists (takes priority over local)
     if (Test-Path $privateConfig) {
         $privateSettings = Import-YamlConfig $privateConfig
         $Script:Config = Merge-Configs $Script:Config $privateSettings
@@ -341,6 +350,34 @@ if ($ConfigFile -and (Test-Path $ConfigFile)) {
 }
 
 $Script:DryRun = $DryRun
+
+# Create System Restore Point
+# ---------------------------
+# Creates a restore point before making changes (unless disabled or dry run)
+
+if (Get-ConfigValue "create_restore_point" $true) {
+    if (-not $Script:DryRun) {
+        Write-Status "Creating System Restore Point..." "Info"
+        try {
+            # Enable System Restore on C: if not already enabled
+            Enable-ComputerRestore -Drive "C:\" -ErrorAction SilentlyContinue
+
+            # Create restore point
+            Checkpoint-Computer -Description "Bootible Pre-Setup $(Get-Date -Format 'yyyy-MM-dd HH:mm')" -RestorePointType "MODIFY_SETTINGS" -ErrorAction Stop
+            Write-Status "Restore point created" "Success"
+        } catch {
+            if ($_.Exception.Message -match "1058") {
+                Write-Status "System Restore service not running - skipping restore point" "Warning"
+            } elseif ($_.Exception.Message -match "already been created") {
+                Write-Status "Restore point already exists (limit: 1 per 24 hours)" "Info"
+            } else {
+                Write-Status "Could not create restore point: $($_.Exception.Message)" "Warning"
+            }
+        }
+    } else {
+        Write-Status "[DRY RUN] Would create System Restore Point" "Info"
+    }
+}
 
 # Load and run modules
 $modulesPath = Join-Path $Script:DeviceRoot "modules"

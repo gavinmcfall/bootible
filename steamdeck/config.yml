@@ -13,6 +13,9 @@
 # =============================================================================
 # Hostname and network configuration.
 
+# Create a btrfs snapshot of /home before making changes
+create_snapshot: true
+
 # Hostname - leave empty to keep current hostname
 # Example: "steamdeck" or "deck-living-room"
 hostname: ""

@@ -152,7 +152,8 @@ if (Get-ConfigValue "install_dev_tools" $true) {
 if (Get-ConfigValue "install_system_utilities" $true) {
     $sysApps = @(
         @{ Id = "RevoUninstaller.RevoUninstaller"; Name = "Revo Uninstaller"; Config = "install_revo_uninstaller" },
-        @{ Id = "Piriform.CCleaner"; Name = "CCleaner"; Config = "install_ccleaner" }
+        @{ Id = "Piriform.CCleaner"; Name = "CCleaner"; Config = "install_ccleaner" },
+        @{ Id = "AntibodySoftware.WizTree"; Name = "WizTree"; Config = "install_wiztree" }
     )
 
     foreach ($app in $sysApps) {

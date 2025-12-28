@@ -117,39 +117,56 @@
     mode: '0755'
 
 # Check for local EmuDeck files (Patreon/EA version)
-# Checks private/files/ first (overlay repo), then files/ (local)
+# Priority order:
+#   1. private/files/steamdeck/scripts/ (new structure)
+#   2. private/files/appimages/ (legacy structure)
+#   3. files/steamdeck/scripts/ (local)
 # Supported formats:
-#   - EmuDeck EA SteamOS.desktop.download (Patreon download)
+#   - EmuDeck*.desktop.download (Patreon download)
 #   - EmuDeck*.AppImage
 #   - EmuDeck*.desktop
 
-- name: Check for EmuDeck desktop file in private overlay
+- name: Check for EmuDeck desktop file in private overlay (new structure)
   ansible.builtin.find:
-    paths: "{{ playbook_dir }}/private/files/appimages"
+    paths: "{{ private_files_path }}/scripts"
+    patterns:
+      - "EmuDeck*.desktop.download"
+      - "EmuDeck*.desktop"
+  register: private_emudeck_scripts
+  delegate_to: localhost
+  failed_when: false
+
+- name: Check for EmuDeck desktop file in private overlay (legacy)
+  ansible.builtin.find:
+    paths: "{{ playbook_dir }}/../private/files/appimages"
     patterns:
       - "EmuDeck*.desktop.download"
       - "EmuDeck*.desktop"
   register: private_emudeck_desktop
   delegate_to: localhost
   failed_when: false
+  when: private_emudeck_scripts.files | default([]) | length == 0
 
 - name: Check for EmuDeck desktop file in local files
   ansible.builtin.find:
-    paths: "{{ playbook_dir }}/files/appimages"
+    paths: "{{ local_files_path }}/scripts"
     patterns:
       - "EmuDeck*.desktop.download"
       - "EmuDeck*.desktop"
   register: local_emudeck_desktop_fallback
   delegate_to: localhost
-  when: private_emudeck_desktop.files | default([]) | length == 0
+  when:
+    - private_emudeck_scripts.files | default([]) | length == 0
+    - private_emudeck_desktop.files | default([]) | length == 0
 
 - name: Set EmuDeck desktop file source
   vars:
+    scripts_files: "{{ private_emudeck_scripts.files | default([]) }}"
     private_files: "{{ private_emudeck_desktop.files | default([]) }}"
     fallback_files: "{{ local_emudeck_desktop_fallback.files | default([]) }}"
   ansible.builtin.set_fact:
     local_emudeck_desktop:
-      files: "{{ private_files if (private_files | length > 0) else fallback_files }}"
+      files: "{{ scripts_files if (scripts_files | length > 0) else (private_files if (private_files | length > 0) else fallback_files) }}"
 
 - name: Check for EmuDeck AppImage in private overlay
   ansible.builtin.find:

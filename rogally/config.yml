@@ -11,6 +11,9 @@
 # =============================================================================
 # Hostname and network configuration.
 
+# Create a System Restore Point before making changes
+create_restore_point: true
+
 # Hostname - leave empty to keep current hostname
 # Example: "rogally" or "ally-living-room"
 # NOTE: Requires restart to take effect
@@ -136,6 +139,10 @@ install_parsec_remote: false  # (Same as parsec above, for remote desktop use)
 
 install_emulation: false
 
+# EmuDeck - All-in-one emulation setup (recommended)
+# Uses EA/Patreon version if found in private/files/rogally/scripts/
+install_emudeck: false
+
 # Frontends
 install_retroarch: false      # Multi-system emulator frontend
 install_emulationstation: false  # EmulationStation Desktop Edition
@@ -214,6 +221,11 @@ set_refresh_rate: 0           # 0 = don't change, or set to 120, 144, etc.
 enable_storage_sense: true    # Auto-cleanup temporary files
 compact_os: false             # Compact OS to save space (takes time)
 
+# System Maintenance
+run_disk_cleanup: false       # Run Windows Disk Cleanup (recovers 10-20GB)
+force_time_sync: true         # Force NTP time sync (fixes Xbox Game Pass issues)
+generate_battery_report: false  # Generate battery health report on Desktop
+
 # =============================================================================
 # PATHS
 # =============================================================================
@@ -283,6 +295,7 @@ install_system_utilities: true
 
 install_revo_uninstaller: true    # Advanced uninstaller
 install_ccleaner: true            # System cleaner
+install_wiztree: true             # Fast disk space analyzer
 
 # =============================================================================
 # RUNTIMES & DEPENDENCIES
