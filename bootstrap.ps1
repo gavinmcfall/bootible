@@ -442,6 +442,19 @@ function Save-DryRunLog {
         if ($gitExe) {
             try {
                 Push-Location $privatePath
+                # Ensure git identity is configured (grab from remote URL if not set)
+                $userName = & $gitExe config user.name 2>$null
+                if (-not $userName) {
+                    $remoteUrl = & $gitExe remote get-url origin 2>$null
+                    if ($remoteUrl -match "github\.com[/:]([^/]+)/") {
+                        $ghUser = $Matches[1]
+                        & $gitExe config user.name $ghUser 2>$null
+                        & $gitExe config user.email "$ghUser@users.noreply.github.com" 2>$null
+                    } else {
+                        & $gitExe config user.name "Bootible" 2>$null
+                        & $gitExe config user.email "bootible@localhost" 2>$null
+                    }
+                }
                 & $gitExe add "logs/$Device/$logFileName" 2>$null
                 & $gitExe commit -m "log: $Device dry run $(Get-Date -Format 'yyyy-MM-dd HH:mm')" 2>$null
                 $pushResult = & $gitExe push 2>&1
