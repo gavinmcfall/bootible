@@ -37,6 +37,20 @@ function Write-Status {
     Write-Host $Message
 }
 
+function Sync-SystemTime {
+    # Sync system time to fix certificate validation errors on fresh installs
+    try {
+        $svc = Get-Service w32time -ErrorAction SilentlyContinue
+        if ($svc.Status -ne 'Running') {
+            Start-Service w32time -ErrorAction SilentlyContinue
+        }
+        w32tm /resync /force 2>&1 | Out-Null
+        Write-Status "System time synced" "Success"
+    } catch {
+        # Non-fatal, continue anyway
+    }
+}
+
 function Test-Admin {
     return ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
 }
@@ -341,6 +355,9 @@ function Main {
         return
     }
     Write-Status "Running as Administrator" "Success"
+
+    # Sync time first (fixes certificate errors on fresh installs)
+    Sync-SystemTime
 
     # Check winget
     if (-not (Get-Command winget -ErrorAction SilentlyContinue)) {
