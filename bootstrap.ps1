@@ -10,15 +10,14 @@
     - Other Windows gaming handhelds (Legion Go, etc.)
 
 .USAGE
-    # Run directly from the web:
+    # Preview what will happen (dry run - default):
     irm https://raw.githubusercontent.com/gavinmcfall/bootible/main/bootstrap.ps1 | iex
 
-    # Dry run (preview without changes):
-    $env:BOOTIBLE_DRYRUN = "1"
-    irm https://raw.githubusercontent.com/gavinmcfall/bootible/main/bootstrap.ps1 | iex
+    # Run for real after reviewing:
+    bootible
 
-    # Or with a private repo:
-    $env:BOOTIBLE_PRIVATE = "https://github.com/USER/bootible-private.git"
+    # Or skip preview and run immediately:
+    $env:BOOTIBLE_RUN = "1"
     irm https://raw.githubusercontent.com/gavinmcfall/bootible/main/bootstrap.ps1 | iex
 #>
 
@@ -27,7 +26,7 @@ $ErrorActionPreference = "Stop"
 $BootibleDir = "$env:USERPROFILE\bootible"
 $RepoUrl = "https://github.com/gavinmcfall/bootible.git"
 $PrivateRepo = $env:BOOTIBLE_PRIVATE
-$DryRun = $env:BOOTIBLE_DRYRUN -eq "1"
+$DryRun = $env:BOOTIBLE_RUN -ne "1"  # Dry run by default, set BOOTIBLE_RUN=1 to apply
 $Device = ""
 
 function Write-Status {
@@ -85,10 +84,33 @@ function Install-Git {
     Write-Status "Installing Git..." "Info"
     try {
         winget install --id Git.Git --accept-source-agreements --accept-package-agreements --silent
-        # Refresh PATH
+
+        # Refresh PATH from registry
         $env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path","User")
-        Write-Status "Git installed" "Success"
-        return $true
+
+        # Also add common Git paths directly (winget PATH update may not be immediate)
+        $gitPaths = @(
+            "$env:ProgramFiles\Git\cmd",
+            "${env:ProgramFiles(x86)}\Git\cmd",
+            "$env:LOCALAPPDATA\Programs\Git\cmd"
+        )
+        foreach ($gitPath in $gitPaths) {
+            if ((Test-Path $gitPath) -and ($env:Path -notlike "*$gitPath*")) {
+                $env:Path = "$gitPath;$env:Path"
+            }
+        }
+
+        # Verify git is now available
+        if (Get-Command git -ErrorAction SilentlyContinue) {
+            Write-Status "Git installed" "Success"
+            return $true
+        } else {
+            Write-Status "Git installed but not in PATH. Please close and reopen PowerShell, then run:" "Warning"
+            Write-Host ""
+            Write-Host "  irm https://raw.githubusercontent.com/gavinmcfall/bootible/main/bootstrap.ps1 | iex" -ForegroundColor Yellow
+            Write-Host ""
+            return $false
+        }
     } catch {
         Write-Status "Failed to install Git: $_" "Error"
         return $false
@@ -96,16 +118,28 @@ function Install-Git {
 }
 
 function Clone-Bootible {
-    if (Test-Path $BootibleDir) {
-        Write-Status "Updating existing bootible..." "Info"
-        Push-Location $BootibleDir
-        git pull
-        Pop-Location
-    } else {
-        Write-Status "Cloning bootible..." "Info"
-        git clone $RepoUrl $BootibleDir
+    try {
+        if (Test-Path $BootibleDir) {
+            Write-Status "Updating existing bootible..." "Info"
+            Push-Location $BootibleDir
+            git pull 2>&1 | Out-Null
+            if ($LASTEXITCODE -ne 0) {
+                throw "git pull failed"
+            }
+            Pop-Location
+        } else {
+            Write-Status "Cloning bootible..." "Info"
+            git clone $RepoUrl $BootibleDir 2>&1 | Out-Null
+            if ($LASTEXITCODE -ne 0) {
+                throw "git clone failed"
+            }
+        }
+        Write-Status "Bootible ready at $BootibleDir" "Success"
+        return $true
+    } catch {
+        Write-Status "Failed to clone/update bootible: $_" "Error"
+        return $false
     }
-    Write-Status "Bootible ready at $BootibleDir" "Success"
 }
 
 function Setup-Private {
@@ -129,17 +163,61 @@ function Setup-Private {
         Write-Status "Setting up private configuration..." "Info"
         Write-Status "Repo: $PrivateRepo" "Info"
 
-        if (Test-Path (Join-Path $privatePath ".git")) {
-            Push-Location $privatePath
-            git pull
-            Pop-Location
-        } else {
-            if (Test-Path $privatePath) {
-                Remove-Item -Recurse -Force $privatePath
+        try {
+            if (Test-Path (Join-Path $privatePath ".git")) {
+                Push-Location $privatePath
+                git pull 2>&1 | Out-Null
+                if ($LASTEXITCODE -ne 0) {
+                    throw "git pull failed"
+                }
+                Pop-Location
+            } else {
+                if (Test-Path $privatePath) {
+                    Remove-Item -Recurse -Force $privatePath
+                }
+                git clone $PrivateRepo $privatePath
+                if ($LASTEXITCODE -ne 0) {
+                    throw "git clone failed - check your credentials"
+                }
             }
-            git clone $PrivateRepo $privatePath
+            Write-Status "Private configuration linked" "Success"
+        } catch {
+            Write-Status "Failed to setup private repo: $_" "Warning"
+            Write-Status "Continuing without private config..." "Info"
         }
-        Write-Status "Private configuration linked" "Success"
+    }
+}
+
+function Install-BootibleCommand {
+    $cmdContent = @"
+@echo off
+powershell -ExecutionPolicy Bypass -Command "& '$BootibleDir\$Device\Run.ps1' %*"
+"@
+
+    # Try WindowsApps first (already in PATH)
+    $cmdPath = Join-Path $env:LOCALAPPDATA "Microsoft\WindowsApps\bootible.cmd"
+    try {
+        Set-Content -Path $cmdPath -Value $cmdContent -Force -ErrorAction Stop
+        Write-Status "Installed 'bootible' command" "Success"
+        return
+    } catch {
+        # WindowsApps not writable, try bootible directory
+    }
+
+    # Fallback: put in bootible directory and add to PATH
+    $cmdPath = Join-Path $BootibleDir "bootible.cmd"
+    try {
+        Set-Content -Path $cmdPath -Value $cmdContent -Force
+        # Add to user PATH if not already there
+        $userPath = [System.Environment]::GetEnvironmentVariable("Path", "User")
+        if ($userPath -notlike "*$BootibleDir*") {
+            [System.Environment]::SetEnvironmentVariable("Path", "$BootibleDir;$userPath", "User")
+            $env:Path = "$BootibleDir;$env:Path"
+        }
+        Write-Status "Installed 'bootible' command (added $BootibleDir to PATH)" "Success"
+    } catch {
+        Write-Status "Could not install bootible command: $_" "Warning"
+        Write-Status "You can run manually: $BootibleDir\$Device\Run.ps1" "Info"
     }
 }
 
@@ -204,36 +282,59 @@ function Main {
     }
     Write-Host ""
 
-    Clone-Bootible
+    if (-not (Clone-Bootible)) {
+        Write-Host ""
+        Write-Host "Failed to clone bootible. Check your network connection." -ForegroundColor Red
+        return
+    }
     Write-Host ""
 
+    # Verify Run.ps1 exists
+    $runScript = Join-Path $BootibleDir "$Device\Run.ps1"
+    if (-not (Test-Path $runScript)) {
+        Write-Status "Run.ps1 not found at $runScript" "Error"
+        return
+    }
+
     Setup-Private
+    Write-Host ""
+
+    Install-BootibleCommand
     Write-Host ""
 
     Run-DeviceSetup
 
     Write-Host ""
-    Write-Host "╔════════════════════════════════════════════════════════════╗" -ForegroundColor Green
-    Write-Host "║                   Setup Complete!                          ║" -ForegroundColor White
-    Write-Host "╚════════════════════════════════════════════════════════════╝" -ForegroundColor Green
-    Write-Host ""
-    Write-Host "Device: $Device" -ForegroundColor Yellow
-    Write-Host ""
-    Write-Host "Next steps:" -ForegroundColor Yellow
+    if ($DryRun) {
+        Write-Host "╔════════════════════════════════════════════════════════════╗" -ForegroundColor Yellow
+        Write-Host "║                  DRY RUN COMPLETE                          ║" -ForegroundColor White
+        Write-Host "╚════════════════════════════════════════════════════════════╝" -ForegroundColor Yellow
+        Write-Host ""
+        Write-Host "Review the output above. When ready to apply changes:" -ForegroundColor Yellow
+        Write-Host ""
+        Write-Host "  bootible" -ForegroundColor Green
+        Write-Host ""
+    } else {
+        Write-Host "╔════════════════════════════════════════════════════════════╗" -ForegroundColor Green
+        Write-Host "║                   Setup Complete!                          ║" -ForegroundColor White
+        Write-Host "╚════════════════════════════════════════════════════════════╝" -ForegroundColor Green
+        Write-Host ""
+        Write-Host "Device: $Device" -ForegroundColor Yellow
+        Write-Host ""
+        Write-Host "Next steps:" -ForegroundColor Yellow
 
-    switch ($Device) {
-        "rogally" {
-            Write-Host "  • Restart your device to apply all changes"
-            Write-Host "  • Configure Armoury Crate for performance profiles"
-            Write-Host "  • Set up game streaming apps if installed"
+        switch ($Device) {
+            "rogally" {
+                Write-Host "  • Restart your device to apply all changes"
+                Write-Host "  • Configure Armoury Crate for performance profiles"
+                Write-Host "  • Set up game streaming apps if installed"
+            }
         }
+        Write-Host ""
     }
 
-    Write-Host ""
-    Write-Host "To re-run or update:" -ForegroundColor Yellow
-    Write-Host "  cd $BootibleDir"
-    Write-Host "  git pull"
-    Write-Host "  .\bootstrap.ps1"
+    Write-Host "To re-run anytime:" -ForegroundColor Gray
+    Write-Host "  bootible" -ForegroundColor Gray
     Write-Host ""
 }
 
