@@ -1,0 +1,10 @@
+{
+  "_comment": "WinUtil Config for ROG Ally X - See winutil-reference.md for all options",
+  "_docs": "https://github.com/ChrisTitusTech/winutil",
+
+  "WPFTweaks": [
+  ],
+
+  "WPFInstall": [
+  ]
+}

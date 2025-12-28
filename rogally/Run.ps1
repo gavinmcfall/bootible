@@ -347,6 +347,7 @@ $modulesPath = Join-Path $Script:DeviceRoot "modules"
 
 $moduleOrder = @(
     "base",
+    "debloat",
     "apps",
     "gaming",
     "streaming",

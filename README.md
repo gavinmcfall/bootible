@@ -137,6 +137,18 @@ cd rogally
 .\Run.ps1 -DryRun
 ```
 
+**Post-Setup (Manual Steps):**
+
+After running Bootible, there are some settings that require manual configuration via Armoury Crate UI:
+
+- **VRAM Allocation**: Set to 6GB (Ally) or 10GB (Ally X) in Armoury Crate > Performance > GPU Settings
+- **Controller Calibration**: Armoury Crate > Calibration (calibrate both sticks)
+- **Custom Power Profile**: Create a 20W manual mode for optimal performance/battery balance
+- **Battery Care**: Enable 80% charge limit if mostly docked
+- **CPU Boost**: Add to quick settings for per-game toggling
+
+For a complete walkthrough, see: [Everything You MUST Do - ROG ALLY & ALLY X](https://www.youtube.com/watch?v=oSdTNOPXcYk)
+
 ## Dry Run Mode
 
 Both platforms support a dry run mode that previews changes without applying them. At the end of any run (dry or real), a system summary is displayed:

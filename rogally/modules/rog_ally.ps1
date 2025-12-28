@@ -86,6 +86,21 @@ if (Get-ConfigValue "install_hwinfo" $false) {
     Write-Status "HWiNFO: Detailed hardware monitoring" "Info"
 }
 
+if (Get-ConfigValue "install_msi_afterburner" $false) {
+    Install-WingetPackage -PackageId "Guru3D.Afterburner" -Name "MSI Afterburner"
+    Write-Status "MSI Afterburner: GPU monitoring and overclocking" "Info"
+}
+
+if (Get-ConfigValue "install_cpuz" $false) {
+    Install-WingetPackage -PackageId "CPUID.CPU-Z" -Name "CPU-Z"
+    Write-Status "CPU-Z: CPU information and benchmarking" "Info"
+}
+
+if (Get-ConfigValue "install_gpuz" $false) {
+    Install-WingetPackage -PackageId "TechPowerUp.GPU-Z" -Name "GPU-Z"
+    Write-Status "GPU-Z: GPU information and monitoring" "Info"
+}
+
 # AMD Adrenalin Software
 # ----------------------
 # ROG Ally uses AMD graphics - Adrenalin provides additional controls

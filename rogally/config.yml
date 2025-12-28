@@ -56,6 +56,8 @@ install_powertoys: true  # Microsoft PowerToys - highly recommended
 # Utilities
 install_7zip: true
 install_everything: true  # Fast file search
+install_windows_terminal: true
+install_powershell7: true
 
 # Password Manager
 # ----------------
@@ -120,6 +122,7 @@ install_remote_access: false
 
 # VPN
 install_tailscale: false      # Zero-config mesh VPN
+install_protonvpn: false      # ProtonVPN
 
 # Remote Desktop
 install_anydesk: false        # Remote desktop access
@@ -164,8 +167,10 @@ install_handheld_companion: false
 
 # Optimization Tools
 install_rtss: false           # RivaTuner Statistics Server (FPS limiter/OSD)
-install_hwinfo: false         # Hardware monitoring
-install_msi_afterburner: false  # GPU tweaking (limited on Ally)
+install_hwinfo: true          # Hardware monitoring
+install_msi_afterburner: true # GPU tweaking (limited on Ally)
+install_cpuz: true            # CPU information
+install_gpuz: true            # GPU information
 
 # Power Management
 # Use Windows power plans or Armoury Crate profiles
@@ -189,6 +194,18 @@ enable_game_mode: true        # Windows Game Mode
 enable_hardware_gpu_scheduling: true  # GPU scheduling optimization
 disable_fullscreen_optimizations: false  # Can help some games
 
+# Performance (Security Trade-offs)
+# WARNING: These improve gaming performance but reduce security
+disable_core_isolation: false       # Disable Memory Integrity (improves performance)
+disable_vm_platform: false          # Disable Virtual Machine Platform feature
+
+# AMD Display
+disable_amd_varibright: true        # Disable Vari-Bright for better display on battery
+
+# Steam Settings
+steam_disable_guide_focus: true     # Prevent Xbox button from opening Steam overlay
+steam_start_big_picture: true       # Start Steam in Big Picture mode (controller UI)
+
 # Display
 configure_hdr: false          # HDR settings (if supported)
 set_refresh_rate: 0           # 0 = don't change, or set to 120, 144, etc.
@@ -209,3 +226,72 @@ user_home: "%USERPROFILE%"
 games_path: "D:\\Games"       # Secondary drive if available
 roms_path: "D:\\Emulation\\ROMs"
 bios_path: "D:\\Emulation\\BIOS"
+
+# =============================================================================
+# DEBLOAT & PRIVACY
+# =============================================================================
+# Windows debloat and privacy tweaks. Use with caution.
+
+install_debloat: true
+
+# Privacy
+disable_telemetry: true           # Disable Windows telemetry
+disable_activity_history: true    # Disable activity history
+disable_location_tracking: true   # Disable location services
+disable_copilot: true             # Disable Microsoft Copilot
+
+# UI Tweaks
+classic_right_click_menu: true    # Win11 classic context menu
+disable_bing_search: true         # Remove Bing from Start Menu
+show_file_extensions: true        # Show file extensions in Explorer
+show_hidden_files: false          # Show hidden files in Explorer
+
+# Edge
+debloat_edge: true                # Remove Edge bloat/telemetry
+disable_edge: true                # Disable Edge completely (use with caution)
+
+# Network
+prefer_ipv4: true                 # Prefer IPv4 over IPv6
+disable_teredo: true              # Disable Teredo tunneling
+
+# Performance
+disable_fullscreen_optimizations: true  # Better gaming performance
+set_services_manual: true         # Set non-essential services to manual
+
+# PowerShell
+powershell7_default_terminal: true      # Make PS7 the default terminal
+disable_powershell7_telemetry: true     # Disable PS7 telemetry
+
+# =============================================================================
+# DEVELOPMENT TOOLS
+# =============================================================================
+# Development and programming tools.
+
+install_dev_tools: true
+
+install_git: true
+install_python: true              # Python 3.x
+install_nodejs: true              # Node.js LTS
+install_java: true                # Eclipse Temurin (OpenJDK)
+
+# =============================================================================
+# SYSTEM UTILITIES
+# =============================================================================
+# System maintenance and cleanup tools.
+
+install_system_utilities: true
+
+install_revo_uninstaller: true    # Advanced uninstaller
+install_ccleaner: true            # System cleaner
+
+# =============================================================================
+# RUNTIMES & DEPENDENCIES
+# =============================================================================
+# Common runtimes and libraries needed by many applications.
+
+install_runtimes: true
+
+install_dotnet_runtime: true      # .NET Runtime
+install_dotnet_desktop: true      # .NET Desktop Runtime
+install_vcredist: true            # Visual C++ 2015-2022 Redistributable
+install_directx: true             # DirectX End-User Runtime

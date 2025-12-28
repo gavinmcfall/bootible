@@ -113,5 +113,145 @@ if (Get-ConfigValue "configure_power_plans" $true) {
     Write-Status "Use Armoury Crate to switch between Silent/Performance/Turbo modes" "Info"
 }
 
+# =============================================================================
+# PERFORMANCE TWEAKS (Security Trade-offs)
+# =============================================================================
+# These tweaks improve gaming performance but reduce security.
+# Only enable if you understand the risks.
+
+# Core Isolation / Memory Integrity
+# ----------------------------------
+# Disabling improves gaming performance but reduces protection against malware
+# Reference: https://www.youtube.com/watch?v=oSdTNOPXcYk
+
+if (Get-ConfigValue "disable_core_isolation" $false) {
+    Write-Status "Disabling Core Isolation (Memory Integrity)..." "Warning"
+    Write-Status "This reduces security but improves gaming performance" "Warning"
+
+    if (-not $Script:DryRun) {
+        try {
+            $path = "HKLM:\SYSTEM\CurrentControlSet\Control\DeviceGuard\Scenarios\HypervisorEnforcedCodeIntegrity"
+            if (-not (Test-Path $path)) {
+                New-Item -Path $path -Force | Out-Null
+            }
+            Set-ItemProperty -Path $path -Name "Enabled" -Value 0 -Type DWord
+            Write-Status "Core Isolation disabled (restart required)" "Success"
+        } catch {
+            Write-Status "Could not disable Core Isolation: $_" "Warning"
+        }
+    } else {
+        Write-Status "[DRY RUN] Would disable Core Isolation" "Info"
+    }
+}
+
+# Virtual Machine Platform
+# ------------------------
+# Disabling can improve performance if you don't use WSL2, Hyper-V, or Android apps
+
+if (Get-ConfigValue "disable_vm_platform" $false) {
+    Write-Status "Disabling Virtual Machine Platform..." "Info"
+
+    if (-not $Script:DryRun) {
+        try {
+            $feature = Get-WindowsOptionalFeature -Online -FeatureName "VirtualMachinePlatform" -ErrorAction SilentlyContinue
+            if ($feature -and $feature.State -eq "Enabled") {
+                Disable-WindowsOptionalFeature -Online -FeatureName "VirtualMachinePlatform" -NoRestart -ErrorAction Stop
+                Write-Status "Virtual Machine Platform disabled (restart required)" "Success"
+            } else {
+                Write-Status "Virtual Machine Platform already disabled" "Success"
+            }
+        } catch {
+            Write-Status "Could not disable Virtual Machine Platform: $_" "Warning"
+        }
+    } else {
+        Write-Status "[DRY RUN] Would disable Virtual Machine Platform" "Info"
+    }
+}
+
+# =============================================================================
+# AMD DISPLAY SETTINGS
+# =============================================================================
+
+# Disable AMD Vari-Bright
+# -----------------------
+# Vari-Bright dims the screen on battery to save power, but reduces image quality
+
+if (Get-ConfigValue "disable_amd_varibright" $true) {
+    Write-Status "Disabling AMD Vari-Bright for better display on battery..." "Info"
+
+    if (-not $Script:DryRun) {
+        try {
+            # AMD Vari-Bright registry settings
+            $amdPath = "HKLM:\SYSTEM\CurrentControlSet\Control\Class\{4d36e968-e325-11ce-bfc1-08002be10318}\0000"
+            if (Test-Path $amdPath) {
+                # PP_VariBrightDefaultOnAC and PP_VariBrightDefaultOnDC control the feature
+                Set-ItemProperty -Path $amdPath -Name "PP_VariBrightDefaultOnAC" -Value 0 -Type DWord -ErrorAction SilentlyContinue
+                Set-ItemProperty -Path $amdPath -Name "PP_VariBrightDefaultOnDC" -Value 0 -Type DWord -ErrorAction SilentlyContinue
+                Write-Status "AMD Vari-Bright disabled" "Success"
+            } else {
+                Write-Status "AMD display driver path not found - Vari-Bright may need manual config in AMD Software" "Warning"
+            }
+        } catch {
+            Write-Status "Could not disable Vari-Bright: $_" "Warning"
+        }
+    } else {
+        Write-Status "[DRY RUN] Would disable AMD Vari-Bright" "Info"
+    }
+}
+
+# =============================================================================
+# STEAM SETTINGS
+# =============================================================================
+
+# Configure Steam for better handheld experience
+# -----------------------------------------------
+# Prevents Xbox button from conflicting with Steam overlay
+
+$steamConfigPath = "$env:USERPROFILE\AppData\Local\Steam\config"
+$steamSharedConfig = Join-Path (Split-Path $steamConfigPath) "userdata"
+
+if (Get-ConfigValue "steam_disable_guide_focus" $true) {
+    Write-Status "Configuring Steam to not capture Xbox guide button..." "Info"
+
+    if (-not $Script:DryRun) {
+        # Steam stores this in the registry
+        try {
+            $steamRegPath = "HKCU:\Software\Valve\Steam"
+            if (Test-Path $steamRegPath) {
+                # BigPictureInForeground controls guide button behavior
+                Set-ItemProperty -Path $steamRegPath -Name "BigPictureInForeground" -Value 0 -Type DWord -ErrorAction SilentlyContinue
+                Write-Status "Steam guide button focus disabled" "Success"
+            } else {
+                Write-Status "Steam not installed yet - setting will apply after Steam install" "Info"
+            }
+        } catch {
+            Write-Status "Could not configure Steam: $_" "Warning"
+        }
+    } else {
+        Write-Status "[DRY RUN] Would configure Steam guide button setting" "Info"
+    }
+}
+
+if (Get-ConfigValue "steam_start_big_picture" $true) {
+    Write-Status "Configuring Steam to start in Big Picture mode..." "Info"
+
+    if (-not $Script:DryRun) {
+        try {
+            $steamRegPath = "HKCU:\Software\Valve\Steam"
+            if (Test-Path $steamRegPath) {
+                Set-ItemProperty -Path $steamRegPath -Name "BigPictureInForeground" -Value 1 -Type DWord -ErrorAction SilentlyContinue
+                Set-ItemProperty -Path $steamRegPath -Name "StartupMode" -Value 1 -Type DWord -ErrorAction SilentlyContinue
+                Write-Status "Steam will start in Big Picture mode" "Success"
+            } else {
+                Write-Status "Steam not installed yet - setting will apply after Steam install" "Info"
+            }
+        } catch {
+            Write-Status "Could not configure Steam: $_" "Warning"
+        }
+    } else {
+        Write-Status "[DRY RUN] Would configure Steam Big Picture startup" "Info"
+    }
+}
+
 Write-Status "Optimization complete" "Success"
 Write-Status "Some changes require a restart to take effect" "Warning"
