@@ -10,9 +10,9 @@
 |--------|----------|--------|
 | Steam Deck | SteamOS (Arch) | Ready |
 | ROG Ally X | Windows 11 | Ready |
-| Bazzite | Fedora | Coming Soon |
-| Ubuntu | Linux | Coming Soon |
-| Windows Desktop | Windows 10/11 | Coming Soon |
+| Bazzite | Fedora | Planned |
+| Ubuntu | Linux | Planned |
+| Windows Desktop | Windows 10/11 | Planned |
 
 ---
 
@@ -21,7 +21,7 @@
 ### Steam Deck
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/gavinmcfall/bootible/main/targets/deck.sh | bash
+curl -fsSL https://bootible.dev/deck | bash
 ```
 
 ### ROG Ally X
@@ -29,10 +29,22 @@ curl -fsSL https://raw.githubusercontent.com/gavinmcfall/bootible/main/targets/d
 Run in **PowerShell as Administrator**:
 
 ```powershell
-irm https://raw.githubusercontent.com/gavinmcfall/bootible/main/targets/ally.ps1 | iex
+irm https://bootible.dev/rog | iex
 ```
 
 That's it! Bootible runs in **dry-run mode** by default so you can preview changes. When ready, just type `bootible` to apply.
+
+<details>
+<summary>Alternative: Direct GitHub URLs</summary>
+
+```bash
+# Steam Deck
+curl -fsSL https://raw.githubusercontent.com/gavinmcfall/bootible/main/targets/deck.sh | bash
+
+# ROG Ally X
+irm https://raw.githubusercontent.com/gavinmcfall/bootible/main/targets/ally.ps1 | iex
+```
+</details>
 
 ---
 
@@ -95,12 +107,12 @@ your-private-repo/
 
 **Steam Deck:**
 ```bash
-curl -fsSL https://raw.githubusercontent.com/gavinmcfall/bootible/main/targets/deck.sh | bash -s -- git@github.com:YOU/your-config.git
+curl -fsSL https://bootible.dev/deck | bash -s -- git@github.com:YOU/your-config.git
 ```
 
 **ROG Ally X:**
 ```powershell
-irm https://raw.githubusercontent.com/gavinmcfall/bootible/main/targets/ally.ps1 | iex
+irm https://bootible.dev/rog | iex
 # When prompted, enter your GitHub username and repo name
 ```
 
@@ -128,6 +140,9 @@ bootible/
 │       ├── playbook.yml       # Ansible playbook
 │       ├── config.yml         # Default settings
 │       └── roles/             # Ansible roles
+│
+├── cloudflare/                 # URL shortener
+│   └── worker/                # Cloudflare Worker (bootible.dev)
 │
 └── private/                    # Your private config (separate repo)
 ```

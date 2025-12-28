@@ -17,17 +17,17 @@ The repository is well-structured and implements a clever dual-bootstrapping mec
 ## Resolved Issues ✅
 
 ### 1. Broken Handler in SSH Role (Steam Deck)
-**File:** `steamdeck/roles/ssh/tasks/main.yml`
+**File:** `config/steamdeck/roles/ssh/tasks/main.yml`
 **Status:** **Fixed**
 The task now correctly uses `register` and a conditional task instead of a missing handler. This ensures the SSH service is only restarted when the port configuration actually changes.
 
 ### 2. Destructive Network Configuration (Windows)
-**File:** `rogally/modules/base.ps1`
+**File:** `config/rog-ally/modules/base.ps1`
 **Status:** **Fixed**
 The script now checks if the static IP is already set before applying changes. Crucially, it includes a `try...catch` block that attempts to restore DHCP if the static IP configuration fails, preventing network lockouts.
 
 ### 3. Ansible `nmcli` Module
-**File:** `steamdeck/roles/base/tasks/main.yml`
+**File:** `config/steamdeck/roles/base/tasks/main.yml`
 **Status:** **Fixed**
 The role now uses the `community.general.nmcli` module instead of raw shell commands, ensuring idempotency and cleaner execution.
 
@@ -36,21 +36,21 @@ The role now uses the `community.general.nmcli` module instead of raw shell comm
 ## Outstanding Issues ⚠️
 
 ### 1. Fragile YAML Parser (ROG Ally)
-**File:** `rogally/Run.ps1` -> `Import-YamlConfig` function
+**File:** `config/rog-ally/Run.ps1` -> `Import-YamlConfig` function
 **Severity:** Medium
 
 **Issue:**
 The custom regex-based YAML parser relies on strict 2-space indentation (`^  (\w+):`) and does not handle lists (lines starting with `-`).
 
 **Impact:**
-- If a user uses 4 spaces or tabs in their `private/rogally/config.yml`, the parser will fail to read nested keys.
+- If a user uses 4 spaces or tabs in their `private/rog-ally/config.yml`, the parser will fail to read nested keys.
 - List values (like `dns:` in `config.yml`) are completely ignored or parsed incorrectly.
 
 **Recommendation:**
 Consider using a more robust parsing logic or documenting the strict formatting requirements clearly. Alternatively, check if `powershell-yaml` can be installed via `Install-Module` if the user approves external dependencies.
 
 ### 2. GitHub API Rate Limits
-**File:** `steamdeck/roles/decky/tasks/install_plugin.yml`
+**File:** `config/steamdeck/roles/decky/tasks/install_plugin.yml`
 **Severity:** Low
 
 **Issue:**
@@ -63,7 +63,7 @@ Unauthenticated requests are limited to 60 per hour. If a user installs many plu
 Add a `github_token` variable to `config.yml` (optional) and use it in the `ansible.builtin.uri` task if present.
 
 ### 3. Ansible PATH in Bootstrap
-**File:** `bootstrap.sh`
+**File:** `targets/deck.sh`
 **Severity:** Low
 
 **Issue:**

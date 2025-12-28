@@ -4,8 +4,8 @@ private/
 # Local installation files (per-device)
 files/steamdeck/flatpaks/*
 files/steamdeck/appimages/*
-files/rogally/installers/*
-files/rogally/configs/*
+files/rog-ally/installers/*
+files/rog-ally/configs/*
 !files/**/.gitkeep
 
 # Ansible

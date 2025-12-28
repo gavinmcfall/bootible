@@ -15,7 +15,7 @@
 create_restore_point: true
 
 # Hostname - leave empty to keep current hostname
-# Example: "rogally" or "ally-living-room"
+# Example: "rog-ally" or "ally-living-room"
 # NOTE: Requires restart to take effect
 hostname: ""
 
