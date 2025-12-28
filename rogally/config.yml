@@ -235,9 +235,10 @@ generate_battery_report: false  # Generate battery health report on Desktop
 user_home: "%USERPROFILE%"
 
 # Game libraries (for emulation, etc.)
-games_path: "D:\\Games"       # Secondary drive if available
-roms_path: "D:\\Emulation\\ROMs"
-bios_path: "D:\\Emulation\\BIOS"
+# Change to D: or SD card path if you have secondary storage
+games_path: "C:\\Games"
+roms_path: "C:\\Emulation\\ROMs"
+bios_path: "C:\\Emulation\\BIOS"
 
 # =============================================================================
 # DEBLOAT & PRIVACY

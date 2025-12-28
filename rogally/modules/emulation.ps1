@@ -75,17 +75,29 @@ if (Get-ConfigValue "install_emudeck" $false) {
 }
 
 # Create emulation directories
-$romsPath = Get-ConfigValue "roms_path" "D:\Emulation\ROMs"
-$biosPath = Get-ConfigValue "bios_path" "D:\Emulation\BIOS"
+$romsPath = Get-ConfigValue "roms_path" "C:\Emulation\ROMs"
+$biosPath = Get-ConfigValue "bios_path" "C:\Emulation\BIOS"
 
 if (-not (Test-Path $romsPath)) {
-    Write-Status "Creating ROMs directory: $romsPath" "Info"
-    New-Item -ItemType Directory -Path $romsPath -Force | Out-Null
+    if ($Script:DryRun) {
+        Write-Status "[DRY RUN] Would create ROMs directory: $romsPath" "Info"
+    } else {
+        Write-Status "Creating ROMs directory: $romsPath" "Info"
+        New-Item -ItemType Directory -Path $romsPath -Force | Out-Null
+    }
+} else {
+    Write-Status "ROMs directory exists: $romsPath" "Success"
 }
 
 if (-not (Test-Path $biosPath)) {
-    Write-Status "Creating BIOS directory: $biosPath" "Info"
-    New-Item -ItemType Directory -Path $biosPath -Force | Out-Null
+    if ($Script:DryRun) {
+        Write-Status "[DRY RUN] Would create BIOS directory: $biosPath" "Info"
+    } else {
+        Write-Status "Creating BIOS directory: $biosPath" "Info"
+        New-Item -ItemType Directory -Path $biosPath -Force | Out-Null
+    }
+} else {
+    Write-Status "BIOS directory exists: $biosPath" "Success"
 }
 
 # Frontends
