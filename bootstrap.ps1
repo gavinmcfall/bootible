@@ -89,13 +89,23 @@ function Find-GitExe {
         "$env:ProgramFiles\Git\cmd\git.exe",
         "$env:ProgramFiles\Git\bin\git.exe",
         "${env:ProgramFiles(x86)}\Git\cmd\git.exe",
-        "$env:LOCALAPPDATA\Programs\Git\cmd\git.exe"
+        "$env:LOCALAPPDATA\Programs\Git\cmd\git.exe",
+        "$env:USERPROFILE\AppData\Local\Programs\Git\cmd\git.exe",
+        "$env:USERPROFILE\scoop\apps\git\current\bin\git.exe",
+        "C:\Git\cmd\git.exe",
+        "C:\Program Files\Git\cmd\git.exe"
     )
 
     foreach ($path in $searchPaths) {
         if (Test-Path $path) {
             return $path
         }
+    }
+
+    # Last resort: search Program Files recursively (slow but thorough)
+    $found = Get-ChildItem -Path "$env:ProgramFiles" -Recurse -Filter "git.exe" -ErrorAction SilentlyContinue | Select-Object -First 1
+    if ($found) {
+        return $found.FullName
     }
 
     return $null
@@ -109,12 +119,14 @@ function Install-Git {
         return $true
     }
 
-    Write-Status "Installing Git..." "Info"
+    Write-Status "Installing Git (this may take a minute)..." "Info"
     try {
-        winget install --id Git.Git --accept-source-agreements --accept-package-agreements --silent
+        # Use --silent and --disable-interactivity, show output so user sees progress
+        $result = winget install --id Git.Git --accept-source-agreements --accept-package-agreements --silent --disable-interactivity 2>&1
+        Write-Host $result
 
-        # Give it a moment to finish
-        Start-Sleep -Seconds 2
+        # Wait for filesystem to settle
+        Start-Sleep -Seconds 5
 
         # Find where it installed
         $gitPath = Find-GitExe
