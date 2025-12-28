@@ -313,8 +313,10 @@ function Setup-Private {
         Write-Host ""
         $response = Read-Host "Do you have a private config repo? (y/N)"
         if ($response -match "^[Yy]") {
-            Write-Host "Enter GitHub repo (e.g., " -NoNewline
-            Write-Host "username/repo" -ForegroundColor Yellow -NoNewline
+            Write-Host "Your GitHub username: " -NoNewline
+            $Script:GitHubUser = Read-Host
+            Write-Host "Private repo (e.g., " -NoNewline
+            Write-Host "owner/repo" -ForegroundColor Yellow -NoNewline
             Write-Host "): " -NoNewline
             $repoPath = Read-Host
             if ($repoPath) {
@@ -442,14 +444,12 @@ function Save-DryRunLog {
         if ($gitExe) {
             try {
                 Push-Location $privatePath
-                # Ensure git identity is configured (grab from remote URL if not set)
+                # Ensure git identity is configured for commit
                 $userName = & $gitExe config user.name 2>$null
                 if (-not $userName) {
-                    $remoteUrl = & $gitExe remote get-url origin 2>$null
-                    if ($remoteUrl -match "github\.com[/:]([^/]+)/") {
-                        $ghUser = $Matches[1]
-                        & $gitExe config user.name $ghUser 2>$null
-                        & $gitExe config user.email "$ghUser@users.noreply.github.com" 2>$null
+                    if ($Script:GitHubUser) {
+                        & $gitExe config user.name $Script:GitHubUser 2>$null
+                        & $gitExe config user.email "$Script:GitHubUser@users.noreply.github.com" 2>$null
                     } else {
                         & $gitExe config user.name "Bootible" 2>$null
                         & $gitExe config user.email "bootible@localhost" 2>$null
