@@ -392,16 +392,16 @@ function Run-DeviceSetup {
     Write-Host ""
 
     $devicePath = Join-Path $BootibleDir $Device
+    $runScript = Join-Path $devicePath "Run.ps1"
 
     switch ($Device) {
         "rogally" {
-            Push-Location $devicePath
+            # Use -ExecutionPolicy Bypass to avoid execution policy errors
             if ($DryRun) {
-                & ".\Run.ps1" -DryRun
+                powershell -ExecutionPolicy Bypass -File $runScript -DryRun
             } else {
-                & ".\Run.ps1"
+                powershell -ExecutionPolicy Bypass -File $runScript
             }
-            Pop-Location
         }
         default {
             Write-Status "Unknown device type: $Device" "Error"
