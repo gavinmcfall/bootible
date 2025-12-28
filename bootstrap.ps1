@@ -120,32 +120,52 @@ function Install-Git {
     }
 
     Write-Status "Installing Git (this may take a minute)..." "Info"
+
+    # Try winget first
     try {
-        # Use --silent and --disable-interactivity, show output so user sees progress
         $result = winget install --id Git.Git --accept-source-agreements --accept-package-agreements --silent --disable-interactivity 2>&1
         Write-Host $result
+        Start-Sleep -Seconds 3
 
-        # Wait for filesystem to settle
-        Start-Sleep -Seconds 5
-
-        # Find where it installed
         $gitPath = Find-GitExe
         if ($gitPath) {
             $script:GitExe = $gitPath
             Write-Status "Git installed at $gitPath" "Success"
             return $true
-        } else {
-            Write-Status "Git installed but cannot locate git.exe" "Warning"
-            Write-Status "Please close PowerShell, reopen as Admin, and run:" "Warning"
-            Write-Host ""
-            Write-Host "  irm https://raw.githubusercontent.com/gavinmcfall/bootible/main/bootstrap.ps1 | iex" -ForegroundColor Yellow
-            Write-Host ""
-            return $false
         }
     } catch {
-        Write-Status "Failed to install Git: $_" "Error"
-        return $false
+        Write-Status "winget install failed, trying direct download..." "Warning"
     }
+
+    # Fallback: Download from git-scm.com
+    Write-Status "Downloading Git from git-scm.com..." "Info"
+    try {
+        $gitInstaller = "$env:TEMP\Git-installer.exe"
+        $gitUrl = "https://github.com/git-for-windows/git/releases/download/v2.47.1.windows.1/Git-2.47.1-64-bit.exe"
+
+        Invoke-WebRequest -Uri $gitUrl -OutFile $gitInstaller -UseBasicParsing
+
+        Write-Status "Running Git installer (silent)..." "Info"
+        Start-Process -FilePath $gitInstaller -ArgumentList "/VERYSILENT", "/NORESTART", "/NOCANCEL", "/SP-", "/CLOSEAPPLICATIONS", "/RESTARTAPPLICATIONS" -Wait
+
+        # Clean up
+        Remove-Item $gitInstaller -ErrorAction SilentlyContinue
+
+        Start-Sleep -Seconds 3
+
+        $gitPath = Find-GitExe
+        if ($gitPath) {
+            $script:GitExe = $gitPath
+            Write-Status "Git installed at $gitPath" "Success"
+            return $true
+        }
+    } catch {
+        Write-Status "Direct download failed: $_" "Error"
+    }
+
+    Write-Status "Could not install Git automatically" "Error"
+    Write-Status "Please install Git manually from https://git-scm.com then re-run" "Warning"
+    return $false
 }
 
 function Clone-Bootible {
