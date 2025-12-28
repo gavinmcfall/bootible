@@ -459,17 +459,13 @@ function Save-DryRunLog {
             & $gitExe add "logs/$Device/$logFileName" 2>$null
             & $gitExe commit -m "log: $Device dry run $(Get-Date -Format 'yyyy-MM-dd HH:mm')" 2>$null
 
-            # Temporarily allow errors (git writes to stderr even on success)
-            $oldEAP = $ErrorActionPreference
-            $ErrorActionPreference = "Continue"
-            & $gitExe push 2>$null
-            $pushExitCode = $LASTEXITCODE
-            $ErrorActionPreference = $oldEAP
+            # Use cmd.exe to avoid PowerShell stderr handling issues
+            cmd /c "`"$gitExe`" push 2>nul"
 
-            if ($pushExitCode -eq 0) {
+            if ($LASTEXITCODE -eq 0) {
                 Write-Status "Log pushed to private repo" "Success"
             } else {
-                Write-Status "Could not push log (exit code: $pushExitCode)" "Warning"
+                Write-Status "Could not push log (exit code: $LASTEXITCODE)" "Warning"
             }
 
             Pop-Location
