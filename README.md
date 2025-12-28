@@ -1,224 +1,237 @@
 # Bootible
 
-Universal configuration automation for gaming handhelds and desktops.
+> One-liner setup for gaming handhelds and desktops.
 
-**Supported Devices:**
-- **Steam Deck** (SteamOS/Arch Linux) - Ansible-based
-- **ROG Ally X** (Windows 11) - PowerShell-based
-- More coming soon (Bazzite, Ubuntu, Windows Desktop, macOS)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+
+## Supported Devices
+
+| Device | Platform | Status |
+|--------|----------|--------|
+| Steam Deck | SteamOS (Arch) | Ready |
+| ROG Ally X | Windows 11 | Ready |
+| Bazzite | Fedora | Coming Soon |
+| Ubuntu | Linux | Coming Soon |
+| Windows Desktop | Windows 10/11 | Coming Soon |
+
+---
 
 ## Quick Start
 
-### Steam Deck (SteamOS)
+### Steam Deck
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/gavinmcfall/bootible/main/targets/deck.sh | bash
 ```
 
-### ROG Ally X (Windows)
+### ROG Ally X
 
-Run in PowerShell as Administrator:
+Run in **PowerShell as Administrator**:
+
 ```powershell
 irm https://raw.githubusercontent.com/gavinmcfall/bootible/main/targets/ally.ps1 | iex
 ```
 
-### Other Devices (Coming Soon)
+That's it! Bootible runs in **dry-run mode** by default so you can preview changes. When ready, just type `bootible` to apply.
+
+---
+
+## What Gets Installed
+
+| Category | Steam Deck | ROG Ally X |
+|----------|------------|------------|
+| **Package Manager** | Flatpak | winget |
+| **Apps** | Discord, Spotify, VLC, browsers | Discord, Spotify, VLC, browsers |
+| **Gaming** | Decky Loader, Proton-GE | Steam, Xbox, game launchers |
+| **Streaming** | Moonlight, Chiaki, Greenlight | Moonlight, Chiaki, Parsec |
+| **Remote Access** | SSH, Tailscale, Sunshine | Tailscale, RDP |
+| **Emulation** | EmuDeck, RetroArch | EmuDeck, RetroArch |
+| **Optimization** | SD card setup, shader cache | Debloat, gaming tweaks |
+
+Everything is **disabled by default** - enable only what you need in your config.
+
+---
+
+## Private Configuration
+
+Store your personal settings in a private repo that syncs across devices.
+
+### Option 1: Quick Setup (Recommended)
 
 ```bash
-# Bazzite
-curl -fsSL https://raw.githubusercontent.com/gavinmcfall/bootible/main/targets/bazzite.sh | bash
+# Clone bootible
+git clone https://github.com/gavinmcfall/bootible.git
+cd bootible
 
-# Ubuntu
-curl -fsSL https://raw.githubusercontent.com/gavinmcfall/bootible/main/targets/ubuntu.sh | bash
+# Create private config structure
+./init-private-repo.sh
+
+# Push to your private repo
+cd private
+git remote add origin git@github.com:YOUR_USER/my-bootible-config.git
+git push -u origin main
 ```
 
+### Option 2: Create Manually
+
+[![Create Private Repo](https://img.shields.io/badge/GitHub-Create%20Private%20Repo-181717?logo=github)](https://github.com/new?name=bootible-private&visibility=private)
+
+Then add this structure:
+
+```
+your-private-repo/
+├── rog-ally/
+│   ├── config.yml          # Your ROG Ally settings
+│   └── scripts/            # EmuDeck EA, etc.
+├── steamdeck/
+│   ├── config.yml          # Your Steam Deck settings
+│   └── scripts/            # EmuDeck EA, etc.
+└── logs/
+    ├── rog-ally/           # Dry run logs (auto-generated)
+    └── steamdeck/
+```
+
+### Using Your Private Config
+
+**Steam Deck:**
+```bash
+curl -fsSL https://raw.githubusercontent.com/gavinmcfall/bootible/main/targets/deck.sh | bash -s -- git@github.com:YOU/your-config.git
+```
+
+**ROG Ally X:**
 ```powershell
-# Windows Desktop
-irm https://raw.githubusercontent.com/gavinmcfall/bootible/main/targets/windows.ps1 | iex
+irm https://raw.githubusercontent.com/gavinmcfall/bootible/main/targets/ally.ps1 | iex
+# When prompted, enter your GitHub username and repo name
 ```
 
-## What It Does
+> **Note:** Private repo requires `main` branch, no branch protection (bootible auto-pushes dry run logs).
 
-Bootible automates the setup of gaming handhelds with:
-
-| Feature | Steam Deck | ROG Ally X |
-|---------|------------|------------|
-| Package Manager | Flatpak | winget |
-| Apps | Discord, Spotify, VLC, etc. | Discord, Spotify, VLC, etc. |
-| Gaming | Decky Loader, Proton-GE | Steam, Xbox, launchers |
-| Streaming | Moonlight, Chiaki, Greenlight | Moonlight, Chiaki, Parsec |
-| Remote Access | SSH, Tailscale, Sunshine | Tailscale, RDP |
-| Emulation | EmuDeck | RetroArch, standalone emulators |
-| Controller | StickDeck (use Deck as PC gamepad) | - |
-| Optimization | SD card, shader cache | Windows gaming tweaks |
+---
 
 ## Project Structure
 
 ```
 bootible/
-├── targets/
-│   ├── ally.ps1              # ROG Ally bootstrap (Windows)
-│   ├── deck.sh               # Steam Deck bootstrap (SteamOS)
-│   ├── bazzite.sh            # Bazzite (coming soon)
-│   ├── ubuntu.sh             # Ubuntu (coming soon)
-│   ├── windows.ps1           # Windows Desktop (coming soon)
-│   └── common/
-│       ├── common.ps1        # Shared PowerShell functions
-│       └── common.sh         # Shared shell functions
+├── targets/                    # Bootstrap scripts
+│   ├── ally.ps1               # ROG Ally (Windows)
+│   ├── deck.sh                # Steam Deck (SteamOS)
+│   └── common/                # Shared functions
 │
-├── config/
-│   ├── rog-ally/             # ROG Ally X configuration
-│   │   ├── Run.ps1           # Main script
-│   │   ├── config.yml        # Default settings
-│   │   ├── modules/          # PowerShell modules
-│   │   └── scripts/          # Install scripts (EmuDeck EA, etc.)
+├── config/                     # Device configurations
+│   ├── rog-ally/
+│   │   ├── Run.ps1            # Main script
+│   │   ├── config.yml         # Default settings
+│   │   ├── modules/           # Feature modules
+│   │   └── scripts/           # Install scripts
 │   │
-│   ├── steamdeck/            # Steam Deck configuration
-│   │   ├── playbook.yml      # Ansible playbook
-│   │   ├── config.yml        # Default settings
-│   │   ├── roles/            # Ansible roles
-│   │   ├── appimages/        # AppImage files
-│   │   ├── flatpaks/         # Local .flatpak files
-│   │   └── scripts/          # Install scripts
-│   │
-│   ├── bazzite/              # Bazzite (coming soon)
-│   ├── ubuntu/               # Ubuntu (coming soon)
-│   └── windows/              # Windows Desktop (coming soon)
+│   └── steamdeck/
+│       ├── playbook.yml       # Ansible playbook
+│       ├── config.yml         # Default settings
+│       └── roles/             # Ansible roles
 │
-└── private/                  # Your private config (separate repo)
-    ├── rog-ally/
-    │   ├── config.yml
-    │   └── scripts/
-    ├── steamdeck/
-    │   ├── config.yml
-    │   └── scripts/
-    └── logs/
-        ├── rog-ally/
-        └── steamdeck/
+└── private/                    # Your private config (separate repo)
 ```
 
-## Configuration
+---
 
-### Default Config
+## Configuration Reference
 
-Each device has a `config.yml` with sensible defaults. Most options are disabled by default - enable what you need.
+### Example: Enable common apps
 
-### Private Config (Recommended)
-
-Create a private repository for your personal settings:
-
-```bash
-./init-private-repo.sh
-cd private
-git remote add origin git@github.com:YOUR_USER/bootible-private.git
-git push -u origin main
+```yaml
+# private/rog-ally/config.yml
+install_discord: true
+install_spotify: true
+install_vlc: true
+password_manager: "1password"
 ```
 
-**Note:** The private repo must use `main` as the default branch and cannot have branch protection enabled (bootible auto-pushes dry run logs to `logs/<device>/`).
+### Example: Enable game streaming
 
-Then run with your private repo:
-
-```bash
-# Steam Deck
-curl -fsSL https://raw.githubusercontent.com/gavinmcfall/bootible/main/targets/deck.sh | bash -s -- git@github.com:YOUR_USER/private.git
-
-# ROG Ally (PowerShell)
-$env:BOOTIBLE_PRIVATE = "https://github.com/YOUR_USER/private.git"
-irm https://raw.githubusercontent.com/gavinmcfall/bootible/main/targets/ally.ps1 | iex
+```yaml
+install_moonlight: true
+install_chiaki: true      # PlayStation Remote Play
+install_greenlight: true  # Xbox streaming
 ```
 
-Your private config overrides the defaults, so you only need to specify what you want to change.
+### Example: Custom paths
 
-## Device-Specific Documentation
+```yaml
+games_path: "D:\\Games"
+roms_path: "D:\\Emulation\\ROMs"
+bios_path: "D:\\Emulation\\BIOS"
+```
+
+See full config options:
+- [ROG Ally defaults](config/rog-ally/config.yml)
+- [Steam Deck defaults](config/steamdeck/config.yml)
+
+---
+
+## Running Manually
 
 ### Steam Deck
 
-See [config/steamdeck/](config/steamdeck/) for:
-- Available roles and options
-- Decky plugins configuration
-- EmuDeck setup
-- Proton-GE installation
-
-**Run manually:**
 ```bash
-cd config/steamdeck
+cd ~/bootible/config/steamdeck
 ansible-playbook playbook.yml --ask-become-pass
-```
 
-**Dry run (preview changes without applying):**
-```bash
-cd config/steamdeck
+# Dry run
 ansible-playbook playbook.yml --check
 ```
 
 ### ROG Ally X
 
-See [config/rog-ally/](config/rog-ally/) for:
-- Available modules and options
-- Armoury Crate vs Handheld Companion
-- Game streaming setup
-- Windows optimization tweaks
-
-**Run manually:**
 ```powershell
-cd config/rog-ally
+cd $env:USERPROFILE\bootible\config\rog-ally
 .\Run.ps1
-```
 
-**Dry run (preview changes without applying):**
-```powershell
-cd config/rog-ally
+# Dry run
 .\Run.ps1 -DryRun
 ```
 
-**Post-Setup (Manual Steps):**
-
-After running Bootible, there are some settings that require manual configuration via Armoury Crate UI:
-
-- **VRAM Allocation**: Set to 6GB (Ally) or 10GB (Ally X) in Armoury Crate > Performance > GPU Settings
-- **Controller Calibration**: Armoury Crate > Calibration (calibrate both sticks)
-- **Custom Power Profile**: Create a 20W manual mode for optimal performance/battery balance
-- **Battery Care**: Enable 80% charge limit if mostly docked
-- **CPU Boost**: Add to quick settings for per-game toggling
-
-For a complete walkthrough, see: [Everything You MUST Do - ROG ALLY & ALLY X](https://www.youtube.com/watch?v=oSdTNOPXcYk)
-
-## Dry Run Mode
-
-Both platforms support a dry run mode that previews changes without applying them. At the end of any run (dry or real), a system summary is displayed:
-
-```
-System Information:
-  Hostname:    steamdeck
-  IP Address:  192.168.1.100
-  IP Type:     DHCP
-  MAC Address: aa:bb:cc:dd:ee:ff
-  Interface:   wlan0
-```
-
-This is useful for:
-- Verifying network configuration before/after changes
-- Documenting your device's current state
-- Troubleshooting connectivity issues
+---
 
 ## Re-running / Updating
 
+After initial setup, just run:
+
 ```bash
 # Steam Deck
-cd ~/bootible && git pull && ./targets/deck.sh
+bootible
 
-# ROG Ally (PowerShell)
-cd $env:USERPROFILE\bootible; git pull; .\targets\ally.ps1
+# ROG Ally (from anywhere)
+bootible
 ```
+
+Or pull latest and re-run:
+
+```bash
+cd ~/bootible && git pull && ./targets/deck.sh
+```
+
+---
+
+## Post-Setup (ROG Ally)
+
+Some settings require manual configuration via Armoury Crate:
+
+- **VRAM**: Set to 6GB (Ally) or 10GB (Ally X)
+- **Controller Calibration**: Calibrate both sticks
+- **Power Profile**: Create 20W manual mode for balanced performance
+- **Battery Care**: Enable 80% limit if mostly docked
+
+See: [Everything You MUST Do - ROG ALLY](https://www.youtube.com/watch?v=oSdTNOPXcYk)
+
+---
 
 ## Adding New Devices
 
-The modular structure makes it easy to add new devices:
+1. Create `config/<device>/` with config and scripts
+2. Create `targets/<device>.sh` or `.ps1`
+3. Submit a PR!
 
-1. Create a new config directory (e.g., `config/legiongo/`)
-2. Add device-specific configuration and scripts
-3. Create a new bootstrap script in `targets/` (e.g., `targets/legiongo.ps1`)
-4. Submit a PR!
+---
 
 ## License
 
