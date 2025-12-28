@@ -13,6 +13,10 @@
     # Run directly from the web:
     irm https://raw.githubusercontent.com/gavinmcfall/bootible/main/bootstrap.ps1 | iex
 
+    # Dry run (preview without changes):
+    $env:BOOTIBLE_DRYRUN = "1"
+    irm https://raw.githubusercontent.com/gavinmcfall/bootible/main/bootstrap.ps1 | iex
+
     # Or with a private repo:
     $env:BOOTIBLE_PRIVATE = "https://github.com/USER/bootible-private.git"
     irm https://raw.githubusercontent.com/gavinmcfall/bootible/main/bootstrap.ps1 | iex
@@ -23,6 +27,7 @@ $ErrorActionPreference = "Stop"
 $BootibleDir = "$env:USERPROFILE\bootible"
 $RepoUrl = "https://github.com/gavinmcfall/bootible.git"
 $PrivateRepo = $env:BOOTIBLE_PRIVATE
+$DryRun = $env:BOOTIBLE_DRYRUN -eq "1"
 $Device = ""
 
 function Write-Status {
@@ -140,7 +145,11 @@ function Setup-Private {
 
 function Run-DeviceSetup {
     Write-Host ""
-    Write-Status "Running $Device configuration..." "Info"
+    if ($DryRun) {
+        Write-Status "Running $Device configuration (DRY RUN)..." "Warning"
+    } else {
+        Write-Status "Running $Device configuration..." "Info"
+    }
     Write-Host ""
 
     $devicePath = Join-Path $BootibleDir $Device
@@ -148,7 +157,11 @@ function Run-DeviceSetup {
     switch ($Device) {
         "rogally" {
             Push-Location $devicePath
-            & ".\Run.ps1"
+            if ($DryRun) {
+                & ".\Run.ps1" -DryRun
+            } else {
+                & ".\Run.ps1"
+            }
             Pop-Location
         }
         default {
