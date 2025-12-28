@@ -1,0 +1,171 @@
+# StickDeck Role - Use Steam Deck as Wireless Controller
+# ======================================================
+# https://github.com/DiscreteTom/stickdeck-rs
+#
+# StickDeck turns your Steam Deck into a wireless gamepad for your PC,
+# with full trackpad and gyro support.
+#
+# How it works:
+# - Server runs on Steam Deck (this role installs it)
+# - Client runs on Windows PC (you install separately)
+# - Both connect over your local network
+# - PC sees the Deck as an Xbox controller via ViGEm
+#
+# Requirements:
+# - Steam Deck and PC on same network
+# - Windows PC with ViGEm Bus Driver installed
+#   Download: https://github.com/nefarius/ViGEmBus/releases
+#
+# After Running This Playbook:
+# ----------------------------
+# 1. On Windows PC:
+#    - Install ViGEm Bus Driver (restart required)
+#    - Download stickdeck-client from GitHub releases
+#    - Run the client and note the IP address shown
+#
+# 2. On Steam Deck:
+#    - Run StickDeck from Desktop
+#    - Enter your PC's IP address
+#    - Start using Deck as a controller!
+
+---
+- name: Ensure Applications directory exists
+  ansible.builtin.file:
+    path: "{{ deck_home }}/Applications"
+    state: directory
+    mode: '0755'
+
+- name: Ensure Desktop directory exists
+  ansible.builtin.file:
+    path: "{{ deck_home }}/Desktop"
+    state: directory
+    mode: '0755'
+
+- name: Get latest StickDeck release from GitHub
+  vars:
+    auth_header: >-
+      {{ {'Authorization': 'Bearer ' + github_token} if github_token | default('') | length > 0 else {} }}
+  ansible.builtin.uri:
+    url: "https://api.github.com/repos/DiscreteTom/stickdeck-rs/releases/latest"
+    return_content: true
+    headers: "{{ {'Accept': 'application/vnd.github.v3+json'} | combine(auth_header) }}"
+  register: stickdeck_release
+  failed_when: false
+
+- name: Find Linux release asset
+  ansible.builtin.set_fact:
+    stickdeck_url: >-
+      {{ (stickdeck_release.json.assets
+        | selectattr('name', 'match', '.*linux.*')
+        | first).browser_download_url }}
+    stickdeck_version: "{{ stickdeck_release.json.tag_name }}"
+  when:
+    - stickdeck_release.status | default(0) == 200
+    - stickdeck_release.json.assets | default([]) | selectattr('name', 'match', '.*linux.*') | list | length > 0
+  failed_when: false
+
+- name: Check if StickDeck is already installed
+  ansible.builtin.stat:
+    path: "{{ deck_home }}/Applications/stickdeck"
+  register: stickdeck_check
+
+- name: Create temp directory for download
+  ansible.builtin.tempfile:
+    state: directory
+    prefix: stickdeck_
+  register: stickdeck_temp
+  when:
+    - stickdeck_url is defined
+    - stickdeck_url | length > 0
+    - not stickdeck_check.stat.exists
+
+- name: Download StickDeck
+  ansible.builtin.get_url:
+    url: "{{ stickdeck_url }}"
+    dest: "{{ stickdeck_temp.path }}/stickdeck.tar.gz"
+    mode: '0644'
+  when:
+    - stickdeck_temp.path is defined
+    - not stickdeck_check.stat.exists
+  register: stickdeck_download
+
+- name: Extract StickDeck
+  ansible.builtin.unarchive:
+    src: "{{ stickdeck_temp.path }}/stickdeck.tar.gz"
+    dest: "{{ deck_home }}/Applications/"
+    remote_src: true
+  when:
+    - stickdeck_download is defined
+    - stickdeck_download is changed
+
+- name: Find extracted binary
+  ansible.builtin.find:
+    paths: "{{ deck_home }}/Applications"
+    patterns: "stickdeck*"
+    file_type: file
+  register: stickdeck_binary
+  when: stickdeck_download is defined and stickdeck_download is changed
+
+- name: Make StickDeck executable
+  ansible.builtin.file:
+    path: "{{ item.path }}"
+    mode: '0755'
+  loop: "{{ stickdeck_binary.files | default([]) }}"
+  when: stickdeck_binary.files | default([]) | length > 0
+
+- name: Clean up temp directory
+  ansible.builtin.file:
+    path: "{{ stickdeck_temp.path }}"
+    state: absent
+  when: stickdeck_temp.path is defined
+
+- name: Create StickDeck desktop shortcut
+  ansible.builtin.copy:
+    dest: "{{ deck_home }}/Desktop/StickDeck.desktop"
+    mode: '0755'
+    content: |
+      [Desktop Entry]
+      Name=StickDeck
+      Comment=Use Steam Deck as wireless controller for PC
+      Exec={{ deck_home }}/Applications/stickdeck
+      Icon=input-gaming
+      Terminal=true
+      Type=Application
+      Categories=Game;Utility;
+  when: stickdeck_url is defined
+
+- name: Display StickDeck setup instructions
+  ansible.builtin.debug:
+    msg: |
+      StickDeck {{ stickdeck_version | default('') }} installed!
+
+      To use Steam Deck as a controller for your PC:
+
+      1. On your Windows PC:
+         - Install ViGEm Bus Driver:
+           https://github.com/nefarius/ViGEmBus/releases
+         - Restart your PC after installing
+         - Download stickdeck Windows client:
+           https://github.com/DiscreteTom/stickdeck-rs/releases
+         - Run the client and note the port number
+
+      2. On Steam Deck:
+         - Run StickDeck from Desktop (or ~/Applications/)
+         - Enter your PC's IP address and port
+         - Your Deck is now a wireless Xbox controller!
+
+      Features:
+        - Full button/stick support
+        - Trackpad support
+        - Gyro support
+  when: stickdeck_url is defined
+
+- name: Display StickDeck download failure
+  ansible.builtin.debug:
+    msg: |
+      Could not download StickDeck from GitHub.
+
+      This might be due to API rate limiting. Try again later, or
+      download manually from:
+        https://github.com/DiscreteTom/stickdeck-rs/releases
+  when: stickdeck_url is not defined or stickdeck_url | length == 0

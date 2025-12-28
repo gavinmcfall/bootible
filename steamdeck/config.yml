@@ -94,6 +94,10 @@ install_cryoutilities: false  # Performance tweaks
 install_moonlight: false    # Stream games FROM another PC running Sunshine/GeForce
 install_greenlight: false   # Xbox/xCloud game streaming
 
+# Controller Utilities
+# https://github.com/DiscreteTom/stickdeck-rs
+install_stickdeck: false    # Use Steam Deck as wireless controller for PC
+
 # Media Streaming
 install_plex: false
 install_jellyfin: false

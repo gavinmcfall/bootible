@@ -98,6 +98,11 @@
       tags: [emulation, roms, gaming]
       when: install_emudeck | default(false)
 
+    # StickDeck - Use Steam Deck as wireless controller for PC
+    - role: stickdeck
+      tags: [stickdeck, controller, gaming]
+      when: install_stickdeck | default(false)
+
     # Waydroid - Android apps on Steam Deck
     - role: waydroid
       tags: [waydroid, android]
