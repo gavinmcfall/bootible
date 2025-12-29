@@ -24,7 +24,7 @@ const ROUTES = {
 
 const README_URL = `${GITHUB_RAW_BASE}/README.md`;
 
-const SCRIPT_CACHE_TTL = 300; // 5 minutes
+const SCRIPT_CACHE_TTL = 60; // 1 minute (short for testing)
 
 /**
  * Detect if request is from a browser (vs curl/PowerShell)
