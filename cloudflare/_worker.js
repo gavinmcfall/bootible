@@ -9,13 +9,9 @@
  *   /*.png      -> Static assets (served by Pages)
  */
 
-interface Env {
-  ASSETS: Fetcher;
-}
-
 const GITHUB_RAW_BASE = 'https://raw.githubusercontent.com/gavinmcfall/bootible/main';
 
-const ROUTES: Record<string, { path: string; description: string }> = {
+const ROUTES = {
   '/rog': {
     path: '/targets/ally.ps1',
     description: 'ROG Ally (Windows)',
@@ -33,7 +29,7 @@ const SCRIPT_CACHE_TTL = 300; // 5 minutes
 /**
  * Detect if request is from a browser (vs curl/PowerShell)
  */
-function isBrowser(request: Request): boolean {
+function isBrowser(request) {
   const userAgent = request.headers.get('User-Agent') || '';
   const accept = request.headers.get('Accept') || '';
   return accept.includes('text/html') && userAgent.includes('Mozilla');
@@ -42,17 +38,17 @@ function isBrowser(request: Request): boolean {
 /**
  * Markdown to HTML converter
  */
-function markdownToHtml(md: string): string {
+function markdownToHtml(md) {
   let html = md;
 
-  const codeBlocks: string[] = [];
+  const codeBlocks = [];
   html = html.replace(/```(\w*)\n([\s\S]*?)```/g, (_, lang, code) => {
     const escaped = code.replace(/</g, '&lt;').replace(/>/g, '&gt;');
     codeBlocks.push(`<pre><code class="language-${lang}">${escaped}</code></pre>`);
     return `__CODE_BLOCK_${codeBlocks.length - 1}__`;
   });
 
-  const inlineCodes: string[] = [];
+  const inlineCodes = [];
   html = html.replace(/`([^`]+)`/g, (_, code) => {
     const escaped = code.replace(/</g, '&lt;').replace(/>/g, '&gt;');
     inlineCodes.push(`<code>${escaped}</code>`);
@@ -60,11 +56,11 @@ function markdownToHtml(md: string): string {
   });
 
   html = html.replace(/^\|(.+)\|\n\|[-| :]+\|\n((?:\|.+\|\n?)+)/gm, (_, header, body) => {
-    const headerCells = header.split('|').map((c: string) => c.trim()).filter(Boolean);
-    const headerRow = headerCells.map((c: string) => `<th>${c}</th>`).join('');
-    const bodyRows = body.trim().split('\n').map((row: string) => {
-      const cells = row.split('|').map((c: string) => c.trim()).filter(Boolean);
-      return `<tr>${cells.map((c: string) => `<td>${c}</td>`).join('')}</tr>`;
+    const headerCells = header.split('|').map(c => c.trim()).filter(Boolean);
+    const headerRow = headerCells.map(c => `<th>${c}</th>`).join('');
+    const bodyRows = body.trim().split('\n').map(row => {
+      const cells = row.split('|').map(c => c.trim()).filter(Boolean);
+      return `<tr>${cells.map(c => `<td>${c}</td>`).join('')}</tr>`;
     }).join('\n');
     return `<table><thead><tr>${headerRow}</tr></thead><tbody>${bodyRows}</tbody></table>`;
   });
@@ -102,7 +98,7 @@ function markdownToHtml(md: string): string {
 /**
  * Generate docs page from README
  */
-function getDocsPage(readmeHtml: string): string {
+function getDocsPage(readmeHtml) {
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -203,7 +199,7 @@ function getDocsPage(readmeHtml: string): string {
 /**
  * Generate plain text help for CLI clients
  */
-function getPlainTextHelp(): string {
+function getPlainTextHelp() {
   return `Bootible - One-liner setup for gaming handhelds
 
 Usage:
@@ -221,7 +217,7 @@ More info: https://github.com/gavinmcfall/bootible
 /**
  * Landing page HTML
  */
-function getLandingPage(): string {
+function getLandingPage() {
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -536,7 +532,7 @@ function getLandingPage(): string {
 }
 
 export default {
-  async fetch(request: Request, env: Env): Promise<Response> {
+  async fetch(request, env) {
     const url = new URL(request.url);
     const path = url.pathname;
 
