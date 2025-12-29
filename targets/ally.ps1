@@ -139,71 +139,22 @@ function Install-Git {
         return $true
     }
 
-    Write-Status "Installing Git (this may take a minute)..." "Info"
-
-    # Try winget first
-    Write-Host "    Trying winget..." -ForegroundColor Gray
-    try {
-        $result = winget install --id Git.Git --accept-source-agreements --accept-package-agreements --silent --disable-interactivity 2>&1
-        if ($result) {
-            $result -split "`n" | ForEach-Object {
-                if ($_ -match "error|fail|certificate" ) {
-                    Write-Host "    $_" -ForegroundColor Red
-                } elseif ($_ -match "warning") {
-                    Write-Host "    $_" -ForegroundColor Yellow
-                } else {
-                    Write-Host "    $_" -ForegroundColor Gray
-                }
-            }
-        }
-        Start-Sleep -Seconds 3
-
-        $gitPath = Find-GitExe
-        if ($gitPath) {
-            $script:GitExe = $gitPath
-            Write-Status "Git installed via winget at $gitPath" "Success"
-            return $true
-        }
-        Write-Host "    winget completed but git not found, trying direct download..." -ForegroundColor Yellow
-    } catch {
-        Write-Status "winget failed: $_" "Warning"
-        Write-Host "    Trying direct download instead..." -ForegroundColor Yellow
-    }
-
-    # Fallback: Download from git-scm.com
-    Write-Status "Downloading Git from git-scm.com (~65MB)..." "Info"
+    Write-Status "Installing Git from GitHub (~65MB)..." "Info"
     try {
         $gitInstaller = "$env:TEMP\Git-installer.exe"
         $gitUrl = "https://github.com/git-for-windows/git/releases/download/v2.47.1.windows.1/Git-2.47.1-64-bit.exe"
 
-        # Show download progress
-        $ProgressPreference = 'Continue'
         Write-Host "    Downloading..." -ForegroundColor Gray
-        $webClient = New-Object System.Net.WebClient
-        $webClient.DownloadFile($gitUrl, $gitInstaller)
-        Write-Status "Download complete" "Success"
+        [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+        Invoke-WebRequest -Uri $gitUrl -OutFile $gitInstaller -UseBasicParsing
 
         if (-not (Test-Path $gitInstaller)) {
             throw "Download failed - file not found"
         }
+        Write-Status "Download complete" "Success"
 
-        Write-Status "Running Git installer..." "Info"
-        Write-Host "    (installer window may appear briefly)" -ForegroundColor Gray
-        $process = Start-Process -FilePath $gitInstaller -ArgumentList "/VERYSILENT", "/NORESTART", "/SP-" -PassThru
-
-        # Wait with timeout
-        $timeout = 120
-        $timer = 0
-        while (-not $process.HasExited -and $timer -lt $timeout) {
-            Start-Sleep -Seconds 5
-            $timer += 5
-            Write-Host "    Installing... ($timer sec)" -ForegroundColor Gray
-        }
-
-        if (-not $process.HasExited) {
-            Write-Status "Installer taking too long, continuing..." "Warning"
-            $process.Kill()
-        }
+        Write-Status "Running Git installer (please wait)..." "Info"
+        Start-Process -FilePath $gitInstaller -ArgumentList "/VERYSILENT", "/NORESTART", "/SP-" -Wait -NoNewWindow
 
         # Clean up
         Remove-Item $gitInstaller -ErrorAction SilentlyContinue
@@ -216,13 +167,15 @@ function Install-Git {
             Write-Status "Git installed at $gitPath" "Success"
             return $true
         }
-    } catch {
-        Write-Status "Direct download failed: $_" "Error"
-    }
 
-    Write-Status "Could not install Git automatically" "Error"
-    Write-Status "Please install Git manually from https://git-scm.com then re-run" "Warning"
-    return $false
+        Write-Status "Git installed but not found in expected locations" "Warning"
+        Write-Status "Please close and reopen PowerShell, then re-run" "Info"
+        return $false
+    } catch {
+        Write-Status "Git installation failed: $_" "Error"
+        Write-Status "Please install Git manually from https://git-scm.com then re-run" "Warning"
+        return $false
+    }
 }
 
 function Run-GitWithProgress {
