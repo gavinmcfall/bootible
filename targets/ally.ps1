@@ -230,66 +230,51 @@ function Run-GitWithProgress {
         [string]$Description,
         [string[]]$Arguments,
         [string]$WorkingDir = $null,
-        [int]$TimeoutSeconds = 60
+        [int]$TimeoutSeconds = 120
     )
 
     Write-Status "$Description..." "Info"
-    Write-Host "    Command: git $($Arguments -join ' ')" -ForegroundColor DarkGray
 
-    $psi = New-Object System.Diagnostics.ProcessStartInfo
-    $psi.FileName = $script:GitExe
-    $psi.Arguments = $Arguments -join ' '
-    $psi.UseShellExecute = $false
-    $psi.RedirectStandardOutput = $true
-    $psi.RedirectStandardError = $true
-    $psi.CreateNoWindow = $true
+    # Build command - use cmd.exe to avoid stream buffering deadlock
+    $gitArgs = $Arguments -join ' '
+    $command = "`"$($script:GitExe)`" $gitArgs"
+
     if ($WorkingDir) {
-        $psi.WorkingDirectory = $WorkingDir
-        Write-Host "    Directory: $WorkingDir" -ForegroundColor DarkGray
+        Push-Location $WorkingDir
     }
 
     try {
-        $process = [System.Diagnostics.Process]::Start($psi)
+        # Run git directly with output shown in console
+        $result = cmd /c "$command 2>&1"
+        $exitCode = $LASTEXITCODE
+
+        if ($result) {
+            $result -split "`n" | ForEach-Object {
+                if ($_ -match "error|fatal") {
+                    Write-Host "    $_" -ForegroundColor Red
+                } elseif ($_ -match "warning") {
+                    Write-Host "    $_" -ForegroundColor Yellow
+                } elseif ($_ -match "Already up to date|up-to-date") {
+                    Write-Host "    $_" -ForegroundColor Green
+                } elseif ($_.Trim()) {
+                    Write-Host "    $_" -ForegroundColor Gray
+                }
+            }
+        }
+
+        if ($exitCode -ne 0) {
+            throw "Git command failed (exit code $exitCode)"
+        }
+
+        return $true
     } catch {
-        Write-Status "Failed to start git: $_" "Error"
+        Write-Status "Git failed: $_" "Error"
         throw $_
-    }
-
-    $timer = 0
-    while (-not $process.HasExited -and $timer -lt $TimeoutSeconds) {
-        Start-Sleep -Seconds 2
-        $timer += 2
-        Write-Host "    Working... ($timer sec)" -ForegroundColor Gray
-    }
-
-    if (-not $process.HasExited) {
-        Write-Status "Operation timed out after $TimeoutSeconds seconds" "Error"
-        $process.Kill()
-        throw "Operation timed out after $TimeoutSeconds seconds"
-    }
-
-    $stdout = $process.StandardOutput.ReadToEnd()
-    $stderr = $process.StandardError.ReadToEnd()
-
-    if ($process.ExitCode -ne 0) {
-        Write-Status "Git failed with exit code $($process.ExitCode)" "Error"
-        if ($stderr) {
-            Write-Host "    Error output:" -ForegroundColor Red
-            $stderr -split "`n" | ForEach-Object { Write-Host "    $_" -ForegroundColor Red }
+    } finally {
+        if ($WorkingDir) {
+            Pop-Location
         }
-        if ($stdout) {
-            Write-Host "    Standard output:" -ForegroundColor Yellow
-            $stdout -split "`n" | ForEach-Object { Write-Host "    $_" -ForegroundColor Yellow }
-        }
-        throw "Git command failed (exit code $($process.ExitCode))"
     }
-
-    # Show any warnings from stderr (git often writes progress to stderr)
-    if ($stderr -and $stderr -notmatch "^(Cloning|Receiving|Resolving|remote:|Updating)") {
-        Write-Host "    $stderr" -ForegroundColor DarkYellow
-    }
-
-    return $true
 }
 
 function Clone-Bootible {
