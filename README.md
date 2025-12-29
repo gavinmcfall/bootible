@@ -9,7 +9,7 @@
 | Device | Platform | Status |
 |--------|----------|--------|
 | Steam Deck | SteamOS (Arch) | Ready |
-| ROG Ally X | Windows 11 | Ready |
+| ROG Ally (All Varients) | Windows 11 | Ready |
 | Bazzite | Fedora | Planned |
 | Ubuntu | Linux | Planned |
 | Windows Desktop | Windows 10/11 | Planned |
@@ -24,7 +24,7 @@
 curl -fsSL https://bootible.dev/deck | bash
 ```
 
-### ROG Ally X
+### ROG Ally (All Varients)
 
 Run in **PowerShell as Administrator**:
 
@@ -41,7 +41,7 @@ That's it! Bootible runs in **dry-run mode** by default so you can preview chang
 # Steam Deck
 curl -fsSL https://raw.githubusercontent.com/gavinmcfall/bootible/main/targets/deck.sh | bash
 
-# ROG Ally X
+# ROG Ally (All Varients)
 irm https://raw.githubusercontent.com/gavinmcfall/bootible/main/targets/ally.ps1 | iex
 ```
 </details>
@@ -50,7 +50,7 @@ irm https://raw.githubusercontent.com/gavinmcfall/bootible/main/targets/ally.ps1
 
 ## What Gets Installed
 
-| Category | Steam Deck | ROG Ally X |
+| Category | Steam Deck | ROG Ally (All Varients) |
 |----------|------------|------------|
 | **Package Manager** | Flatpak | winget |
 | **Apps** | Discord, Spotify, VLC, browsers | Discord, Spotify, VLC, browsers |
@@ -110,7 +110,7 @@ your-private-repo/
 curl -fsSL https://bootible.dev/deck | bash -s -- git@github.com:YOU/your-config.git
 ```
 
-**ROG Ally X:**
+**ROG Ally (All Varients):**
 ```powershell
 irm https://bootible.dev/rog | iex
 # When prompted, enter your GitHub username and repo name
@@ -195,7 +195,7 @@ ansible-playbook playbook.yml --ask-become-pass
 ansible-playbook playbook.yml --check
 ```
 
-### ROG Ally X
+### ROG Ally (All Varients)
 
 ```powershell
 cd $env:USERPROFILE\bootible\config\rog-ally
