@@ -37,14 +37,16 @@ if ($desiredHostname -and $desiredHostname -ne "") {
 $staticIpConfig = Get-ConfigValue "static_ip" @{}
 $staticIpEnabled = $staticIpConfig.enabled -eq $true
 
+$adapter = $staticIpConfig.adapter
+if (-not $adapter) { $adapter = "Ethernet" }
+
 if ($staticIpEnabled) {
-    $adapter = $staticIpConfig.adapter
     $address = $staticIpConfig.address
     $prefixLength = $staticIpConfig.prefix_length
     $gateway = $staticIpConfig.gateway
     $dnsServers = $staticIpConfig.dns | Where-Object { $_ -and $_ -ne "" }
 
-    if ($adapter -and $address -and $gateway) {
+    if ($address -and $gateway) {
         Write-Status "Configuring static IP on '$adapter'..." "Info"
         try {
             # Get the network adapter
@@ -83,7 +85,29 @@ if ($staticIpEnabled) {
             }
         }
     } else {
-        Write-Status "Static IP enabled but missing required values (adapter, address, gateway)" "Warning"
+        Write-Status "Static IP enabled but missing required values (address, gateway)" "Warning"
+    }
+} else {
+    # Reset to DHCP if static IP is disabled
+    Write-Status "Ensuring DHCP is enabled on '$adapter'..." "Info"
+    try {
+        $netAdapter = Get-NetAdapter -Name $adapter -ErrorAction SilentlyContinue
+        if ($netAdapter) {
+            $currentConfig = Get-NetIPInterface -InterfaceAlias $adapter -AddressFamily IPv4 -ErrorAction SilentlyContinue
+            if ($currentConfig -and $currentConfig.Dhcp -eq 'Disabled') {
+                # Remove static IP configuration
+                Remove-NetIPAddress -InterfaceAlias $adapter -Confirm:$false -ErrorAction SilentlyContinue
+                Remove-NetRoute -InterfaceAlias $adapter -Confirm:$false -ErrorAction SilentlyContinue
+                # Enable DHCP
+                Set-NetIPInterface -InterfaceAlias $adapter -Dhcp Enabled -ErrorAction Stop
+                Set-DnsClientServerAddress -InterfaceAlias $adapter -ResetServerAddresses -ErrorAction Stop
+                Write-Status "DHCP enabled on '$adapter'" "Success"
+            } else {
+                Write-Status "DHCP already enabled on '$adapter'" "Success"
+            }
+        }
+    } catch {
+        Write-Status "Could not configure DHCP: $_" "Warning"
     }
 }
 

@@ -80,6 +80,27 @@
         DNS: {{ static_ip.dns | default([]) | select() | join(', ') }}
   when: static_ip_config is defined and static_ip_config is changed
 
+# Reset to DHCP if static IP is disabled
+- name: Reset to DHCP
+  community.general.nmcli:
+    conn_name: "{{ static_ip.connection | default('Wired connection 1') }}"
+    type: ethernet
+    method4: auto
+    dns4: []
+    dns4_ignore_auto: false
+    state: present
+    autoconnect: true
+  become: true
+  register: dhcp_config
+  when:
+    - not (static_ip.enabled | default(false))
+    - static_ip.connection | default('') | length > 0
+
+- name: Display DHCP configuration
+  ansible.builtin.debug:
+    msg: "DHCP enabled on connection: {{ static_ip.connection | default('Wired connection 1') }}"
+  when: dhcp_config is defined and dhcp_config is changed
+
 # Flathub Setup
 # -------------
 # Flathub is the main source for Flatpak applications.
