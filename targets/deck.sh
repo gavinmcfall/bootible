@@ -340,7 +340,7 @@ main() {
     esac
     echo ""
     echo "To re-run or update:"
-    echo "  cd ~/bootible && git pull && ./bootstrap.sh"
+    echo "  cd ~/bootible && git pull && ./targets/deck.sh"
 }
 
 main "$@"

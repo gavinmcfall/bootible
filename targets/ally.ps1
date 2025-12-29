@@ -583,7 +583,7 @@ function Main {
     Write-Host ""
 
     # Verify Run.ps1 exists
-    $runScript = Join-Path $BootibleDir "$Device\Run.ps1"
+    $runScript = Join-Path $BootibleDir "config\$Device\Run.ps1"
     if (-not (Test-Path $runScript)) {
         Write-Status "Run.ps1 not found at $runScript" "Error"
         return
