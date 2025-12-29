@@ -107,6 +107,38 @@ check_sudo() {
     echo -e "${GREEN}✓${NC} Sudo access confirmed"
 }
 
+# Create Btrfs snapshot (restore point)
+create_snapshot() {
+    echo -e "${BLUE}→${NC} Creating system snapshot..."
+
+    # Check if root is Btrfs
+    if ! findmnt -n -o FSTYPE / | grep -q btrfs; then
+        echo -e "${YELLOW}!${NC} Filesystem is not Btrfs - skipping snapshot"
+        return 0
+    fi
+
+    SNAPSHOT_DIR="/.snapshots"
+    SNAPSHOT_NAME="pre-bootible-$(date +%Y%m%d-%H%M%S)"
+
+    # Create snapshots directory if needed
+    if [[ ! -d "$SNAPSHOT_DIR" ]]; then
+        sudo mkdir -p "$SNAPSHOT_DIR"
+    fi
+
+    # Create the snapshot
+    if sudo btrfs subvolume snapshot / "$SNAPSHOT_DIR/$SNAPSHOT_NAME" 2>/dev/null; then
+        echo -e "${GREEN}✓${NC} Snapshot created: $SNAPSHOT_DIR/$SNAPSHOT_NAME"
+        echo ""
+        echo -e "  ${CYAN}To restore if needed:${NC}"
+        echo "    sudo btrfs subvolume set-default $SNAPSHOT_DIR/$SNAPSHOT_NAME"
+        echo "    sudo reboot"
+        echo ""
+    else
+        echo -e "${YELLOW}!${NC} Could not create snapshot (may need root subvolume)"
+        echo "  Continuing without snapshot..."
+    fi
+}
+
 # Install Ansible (for Steam Deck)
 install_ansible() {
     if command -v ansible-playbook &> /dev/null; then
@@ -205,6 +237,8 @@ main() {
     detect_device
     echo ""
     check_sudo
+    echo ""
+    create_snapshot
     echo ""
     install_ansible
     echo ""
