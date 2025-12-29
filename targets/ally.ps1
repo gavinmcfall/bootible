@@ -21,6 +21,25 @@
     irm https://raw.githubusercontent.com/gavinmcfall/bootible/main/targets/ally.ps1 | iex
 #>
 
+# When running via 'irm | iex', stdin is the script content which breaks git credential manager.
+# Detect this and re-run as a saved script file instead.
+if (-not $env:BOOTIBLE_DIRECT) {
+    $scriptPath = "$env:TEMP\bootible-bootstrap.ps1"
+    $scriptUrl = "https://raw.githubusercontent.com/gavinmcfall/bootible/main/targets/ally.ps1"
+
+    Write-Host "Downloading bootible..." -ForegroundColor Cyan
+    try {
+        [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+        Invoke-WebRequest -Uri $scriptUrl -OutFile $scriptPath -UseBasicParsing
+        $env:BOOTIBLE_DIRECT = "1"
+        & $scriptPath
+        exit $LASTEXITCODE
+    } catch {
+        Write-Host "Failed to download script: $_" -ForegroundColor Red
+        exit 1
+    }
+}
+
 $ErrorActionPreference = "Stop"
 
 $BootibleDir = "$env:USERPROFILE\bootible"
@@ -208,28 +227,8 @@ function Run-GitWithProgress {
             Set-Location $WorkingDir
         }
 
-        # Create empty file for stdin redirection to prevent git reading from PowerShell's stdin
-        $emptyInput = [System.IO.Path]::GetTempFileName()
-
-        # Run git directly - redirect stdin from empty file to isolate from PowerShell
-        $argString = $cleanArgs -join ' '
-        Write-Host "    (A browser window may open for authentication)" -ForegroundColor Yellow
-
-        $psi = New-Object System.Diagnostics.ProcessStartInfo
-        $psi.FileName = $script:GitExe
-        $psi.Arguments = $argString
-        $psi.WorkingDirectory = (Get-Location).Path
-        $psi.UseShellExecute = $false
-        $psi.RedirectStandardInput = $true
-        $psi.RedirectStandardOutput = $false
-        $psi.RedirectStandardError = $false
-
-        $process = [System.Diagnostics.Process]::Start($psi)
-        $process.StandardInput.Close()  # Close stdin immediately
-        $process.WaitForExit()
-
-        Remove-Item $emptyInput -Force -ErrorAction SilentlyContinue
-        $LASTEXITCODE = $process.ExitCode
+        # Simple direct invocation - works because script runs as file (not piped)
+        & $script:GitExe @cleanArgs
 
         if ($LASTEXITCODE -ne 0) {
             throw "Git command failed (exit code $LASTEXITCODE)"
