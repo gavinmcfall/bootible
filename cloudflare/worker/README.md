@@ -1,14 +1,19 @@
 # Bootible Cloudflare Worker
 
-URL shortener for bootible bootstrap scripts.
+URL shortener and landing page for bootible.
 
 ## Routes
 
-| URL | Script | Platform |
-|-----|--------|----------|
-| `bootible.dev/rog` | `targets/ally.ps1` | ROG Ally X (Windows) |
-| `bootible.dev/deck` | `targets/deck.sh` | Steam Deck (SteamOS) |
-| `bootible.dev/` | Help text | - |
+| URL | Content | Description |
+|-----|---------|-------------|
+| `bootible.dev/` | Landing page | HTML for browsers, plain text for CLI |
+| `bootible.dev/docs` | Documentation | README rendered as HTML |
+| `bootible.dev/rog` | `targets/ally.ps1` | ROG Ally bootstrap script |
+| `bootible.dev/deck` | `targets/deck.sh` | Steam Deck bootstrap script |
+| `bootible.dev/logo.png` | Logo | 512x512 PNG |
+| `bootible.dev/favicon.png` | Favicon | 32x32 PNG |
+| `bootible.dev/steamdeck.png` | Steam Deck icon | Device icon |
+| `bootible.dev/rog.png` | ROG Ally icon | Device icon |
 
 ## Development
 
