@@ -33,10 +33,10 @@ if (-not $env:BOOTIBLE_DIRECT) {
         Invoke-WebRequest -Uri $scriptUrl -OutFile $scriptPath -UseBasicParsing
         $env:BOOTIBLE_DIRECT = "1"
         & $scriptPath
-        exit $LASTEXITCODE
+        return  # Don't use 'exit' - it closes the terminal when run via iex
     } catch {
         Write-Host "Failed to download script: $_" -ForegroundColor Red
-        exit 1
+        return
     }
 }
 
