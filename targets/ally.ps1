@@ -182,38 +182,20 @@ function Run-GitWithProgress {
     param(
         [string]$Description,
         [string[]]$Arguments,
-        [string]$WorkingDir = $null,
-        [int]$TimeoutSeconds = 120
+        [string]$WorkingDir = $null
     )
 
     Write-Status "$Description..." "Info"
 
-    # Build command - use cmd.exe to avoid stream buffering deadlock
-    $gitArgs = $Arguments -join ' '
-    $command = "`"$($script:GitExe)`" $gitArgs"
-
+    $originalLocation = Get-Location
     if ($WorkingDir) {
-        Push-Location $WorkingDir
+        Set-Location $WorkingDir
     }
 
     try {
-        # Run git directly with output shown in console
-        $result = cmd /c "$command 2>&1"
+        # Run git directly - allows credential prompts to work
+        & $script:GitExe @Arguments
         $exitCode = $LASTEXITCODE
-
-        if ($result) {
-            $result -split "`n" | ForEach-Object {
-                if ($_ -match "error|fatal") {
-                    Write-Host "    $_" -ForegroundColor Red
-                } elseif ($_ -match "warning") {
-                    Write-Host "    $_" -ForegroundColor Yellow
-                } elseif ($_ -match "Already up to date|up-to-date") {
-                    Write-Host "    $_" -ForegroundColor Green
-                } elseif ($_.Trim()) {
-                    Write-Host "    $_" -ForegroundColor Gray
-                }
-            }
-        }
 
         if ($exitCode -ne 0) {
             throw "Git command failed (exit code $exitCode)"
@@ -224,9 +206,7 @@ function Run-GitWithProgress {
         Write-Status "Git failed: $_" "Error"
         throw $_
     } finally {
-        if ($WorkingDir) {
-            Pop-Location
-        }
+        Set-Location $originalLocation
     }
 }
 
