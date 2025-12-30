@@ -165,9 +165,8 @@ function Get-LatestGitVersion {
         $apiUrl = "https://api.github.com/repos/git-for-windows/git/releases/latest"
         $release = Invoke-RestMethod -Uri $apiUrl -UseBasicParsing -TimeoutSec 10
         # Tag format: v2.47.1.windows.1
-        if ($release.tag_name -match 'v(\d+\.\d+\.\d+)\.windows\.(\d+)') {
+        if ($release.tag_name -match 'v(\d+\.\d+\.\d+)\.windows\.\d+') {
             $version = $matches[1]
-            $suffix = $matches[2]
             return @{
                 Version = $version
                 Tag = $release.tag_name

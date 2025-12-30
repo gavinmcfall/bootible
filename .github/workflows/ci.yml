@@ -57,7 +57,8 @@ jobs:
             if ($analysis) {
               $results += $analysis
               foreach ($issue in $analysis) {
-                Write-Host "::warning file=$($file.FullName),line=$($issue.Line),col=$($issue.Column)::$($issue.RuleName): $($issue.Message)"
+                $level = if ($issue.Severity -eq 'Error') { 'error' } else { 'warning' }
+                Write-Host "::${level} file=$($file.FullName),line=$($issue.Line),col=$($issue.Column)::$($issue.RuleName): $($issue.Message)"
               }
             }
           }
@@ -65,6 +66,9 @@ jobs:
           # Fail if there are errors (not just warnings)
           $errors = $results | Where-Object { $_.Severity -eq 'Error' }
           if ($errors) {
+            foreach ($err in $errors) {
+              Write-Host "ERROR: $($err.ScriptPath):$($err.Line) - $($err.RuleName): $($err.Message)"
+            }
             Write-Host "::error::Found $($errors.Count) error(s)"
             exit 1
           }
