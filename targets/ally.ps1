@@ -450,10 +450,11 @@ function Authenticate-GitHub {
         $pollStart = Get-Date
         $maxWait = [Math]::Min($expiresIn, 300)  # Max 5 minutes
         $tokenHeaders = @{ "Accept" = "application/json" }
+        $currentInterval = $interval  # May increase on slow_down response
 
         while ($ui.Form.Visible -and ((Get-Date) - $pollStart).TotalSeconds -lt $maxWait) {
             [System.Windows.Forms.Application]::DoEvents()
-            Start-Sleep -Seconds $interval
+            Start-Sleep -Seconds $currentInterval
 
             # Poll for token
             try {
@@ -468,8 +469,24 @@ function Authenticate-GitHub {
                     $ui.Form.Close()
                     break
                 }
+                elseif ($tokenResponse.error -eq 'slow_down') {
+                    # GitHub says we're polling too fast - increase interval by 5 seconds
+                    $currentInterval = $currentInterval + 5
+                }
+                elseif ($tokenResponse.error -eq 'expired_token') {
+                    # Device code expired, need to restart
+                    $ui.Status.Text = "Code expired"
+                    $ui.Status.ForeColor = [System.Drawing.Color]::Orange
+                    break
+                }
+                elseif ($tokenResponse.error -eq 'access_denied') {
+                    # User cancelled authorization
+                    $ui.Status.Text = "Cancelled"
+                    break
+                }
+                # 'authorization_pending' is expected while waiting - continue polling
             } catch {
-                # Expected during polling (authorization_pending), but track for debugging
+                # Network or other errors - track for debugging but continue
                 $script:LastOAuthError = $_.Exception.Message
             }
         }
