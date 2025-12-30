@@ -563,15 +563,27 @@ function Setup-Private {
                         throw "gh clone failed"
                     }
                 } else {
-                    # Fall back to git with token in URL (if we can get one)
+                    # Fall back to git with credential helper (avoid token in URL for security)
                     $token = $null
                     try { $token = gh auth token 2>$null } catch {}
 
                     if ($token) {
-                        $repoSlug = $PrivateRepo -replace 'https://github.com/' -replace '\.git$'
-                        $tokenUrl = "https://$token@github.com/$repoSlug.git"
-                        Write-Host "    Cloning with token..." -ForegroundColor Gray
-                        & $script:GitExe clone $tokenUrl $privatePath 2>&1 | Out-Null
+                        # Use GIT_ASKPASS to provide token securely (not visible in process args)
+                        $askpassScript = "$env:TEMP\git-askpass.cmd"
+                        # Create a temporary script that echoes the token
+                        "@echo $token" | Out-File -FilePath $askpassScript -Encoding ASCII -Force
+                        $env:GIT_ASKPASS = $askpassScript
+                        $env:GIT_TERMINAL_PROMPT = "0"
+
+                        Write-Host "    Cloning with credential helper..." -ForegroundColor Gray
+                        try {
+                            & $script:GitExe clone $PrivateRepo $privatePath 2>&1 | Out-Null
+                        } finally {
+                            # Clean up credentials immediately
+                            Remove-Item $askpassScript -Force -ErrorAction SilentlyContinue
+                            Remove-Item Env:\GIT_ASKPASS -ErrorAction SilentlyContinue
+                            Remove-Item Env:\GIT_TERMINAL_PROMPT -ErrorAction SilentlyContinue
+                        }
                     } else {
                         # Last resort - try normal git (may hang on GCM)
                         Write-Host "    Cloning (browser auth may appear)..." -ForegroundColor Yellow
