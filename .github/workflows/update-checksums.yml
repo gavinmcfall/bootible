@@ -1,0 +1,61 @@
+name: Update Checksums
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'targets/ally.ps1'
+      - 'targets/deck.sh'
+
+jobs:
+  update-checksums:
+    name: Auto-update Checksums
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Calculate new checksums
+        id: checksums
+        run: |
+          ALLY_HASH=$(sha256sum targets/ally.ps1 | cut -d' ' -f1)
+          DECK_HASH=$(sha256sum targets/deck.sh | cut -d' ' -f1)
+
+          echo "ally_hash=$ALLY_HASH" >> $GITHUB_OUTPUT
+          echo "deck_hash=$DECK_HASH" >> $GITHUB_OUTPUT
+
+          # Get current checksums from worker
+          ALLY_CURRENT=$(grep -oP "sha256: '\K[a-f0-9]{64}" cloudflare/_worker.js | head -1)
+          DECK_CURRENT=$(grep -oP "sha256: '\K[a-f0-9]{64}" cloudflare/_worker.js | tail -1)
+
+          if [ "$ALLY_HASH" != "$ALLY_CURRENT" ] || [ "$DECK_HASH" != "$DECK_CURRENT" ]; then
+            echo "needs_update=true" >> $GITHUB_OUTPUT
+          else
+            echo "needs_update=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Update worker checksums
+        if: steps.checksums.outputs.needs_update == 'true'
+        run: |
+          # Update ally.ps1 checksum (first sha256 in file)
+          sed -i "0,/sha256: '[a-f0-9]\{64\}'/s//sha256: '${{ steps.checksums.outputs.ally_hash }}'/" cloudflare/_worker.js
+
+          # Update deck.sh checksum (second sha256 in file)
+          sed -i "0,/sha256: '${{ steps.checksums.outputs.ally_hash }}'/! {0,/sha256: '[a-f0-9]\{64\}'/s//sha256: '${{ steps.checksums.outputs.deck_hash }}'/}" cloudflare/_worker.js
+
+      - name: Commit and push
+        if: steps.checksums.outputs.needs_update == 'true'
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git add cloudflare/_worker.js
+          git commit -m "chore: auto-update script checksums
+
+          ally.ps1: ${{ steps.checksums.outputs.ally_hash }}
+          deck.sh: ${{ steps.checksums.outputs.deck_hash }}
+
+          [skip ci]"
+          git push
