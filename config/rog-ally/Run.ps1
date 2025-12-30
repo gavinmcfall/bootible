@@ -537,6 +537,7 @@ $moduleOrder = @(
     "gaming",
     "streaming",
     "remote_access",
+    "ssh",            # SSH keys after remote_access
     "emulation",
     "rog_ally",
     "optimization",   # Optimization after all installs

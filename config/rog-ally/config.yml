@@ -144,6 +144,23 @@ install_rustdesk: false       # Open-source remote desktop
 install_parsec_remote: false  # (Same as parsec above, for remote desktop use)
 
 # =============================================================================
+# SSH
+# =============================================================================
+# SSH key generation and GitHub authentication.
+# Enables git operations via SSH instead of HTTPS.
+
+install_ssh: false
+
+# Key settings
+ssh_key_name: ""              # Key identifier (default: hostname)
+ssh_generate_key: true        # Generate SSH key if not exists
+
+# GitHub integration
+ssh_add_to_github: true       # Add public key to GitHub via gh CLI
+ssh_save_to_private: true     # Save public key to private repo (backup)
+ssh_configure_git: true       # Configure git to use SSH for GitHub
+
+# =============================================================================
 # EMULATION
 # =============================================================================
 # Retro gaming and emulation.
