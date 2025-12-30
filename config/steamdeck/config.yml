@@ -137,6 +137,14 @@ install_neovim: false
 # ----------
 # Enables remote terminal access to your Deck.
 # Connect with: ssh deck@<your-deck-ip>
+#
+# SECURITY CONSIDERATIONS:
+# - Password auth on default port 22 is an attack surface on public WiFi
+# - For better security, consider:
+#   1. Use SSH keys instead of passwords (ssh-copy-id)
+#   2. Change default port (e.g., ssh_port: 2222)
+#   3. Use Tailscale for encrypted access without exposing ports
+#   4. Only enable when needed on trusted networks
 install_ssh: false
 ssh_port: 22
 
