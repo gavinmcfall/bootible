@@ -465,21 +465,24 @@ if (-not (Ensure-YamlModule)) {
 Write-Status "YAML parser ready" "Success"
 
 # Load configuration
+# Always start with defaults, then merge overlays on top
 # Priority: -ConfigFile > private repo > local ~/.config > defaults
 $defaultConfig = Join-Path $Script:DeviceRoot "config.yml"
 $privateConfig = Join-Path $Script:BootibleRoot "private\rog-ally\config.yml"
 $localConfig = Join-Path $env:USERPROFILE ".config\bootible\rog-ally\config.yml"
 
-if ($ConfigFile -and (Test-Path $ConfigFile)) {
-    $Script:Config = Import-YamlConfig $ConfigFile
-    Write-Status "Using config: $ConfigFile" "Info"
-} else {
-    # Load default config
-    if (Test-Path $defaultConfig) {
-        $Script:Config = Import-YamlConfig $defaultConfig
-        Write-Status "Loaded default config" "Info"
-    }
+# Always load defaults first
+if (Test-Path $defaultConfig) {
+    $Script:Config = Import-YamlConfig $defaultConfig
+    Write-Status "Loaded default config" "Info"
+}
 
+if ($ConfigFile -and (Test-Path $ConfigFile)) {
+    # Merge specified config file on top of defaults
+    $customSettings = Import-YamlConfig $ConfigFile
+    $Script:Config = Merge-Configs $Script:Config $customSettings
+    Write-Status "Merged config: $(Split-Path $ConfigFile -Leaf)" "Info"
+} else {
     # Merge local config if exists (~/.config/bootible/rog-ally/config.yml)
     if (Test-Path $localConfig) {
         $localSettings = Import-YamlConfig $localConfig

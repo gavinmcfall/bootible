@@ -179,9 +179,33 @@ if (Get-ConfigValue "install_runtimes" $true) {
     }
 
     # Visual C++ Redistributable
+    # Note: winget often fails with VCRedist (NO_APPLICABLE_INSTALLER error)
+    # Use Chocolatey which is more reliable for these packages
     if (Get-ConfigValue "install_vcredist" $true) {
-        Install-WingetPackage -PackageId "Microsoft.VCRedist.2015+.x64" -Name "VC++ 2015-2022 (x64)"
-        Install-WingetPackage -PackageId "Microsoft.VCRedist.2015+.x86" -Name "VC++ 2015-2022 (x86)"
+        $choco = Get-Command choco -ErrorAction SilentlyContinue
+        if ($choco) {
+            if ($Script:DryRun) {
+                Write-Status "[DRY RUN] Would install VC++ 2015-2022 via Chocolatey" "Info"
+            } else {
+                Write-Status "Installing VC++ 2015-2022 via Chocolatey..." "Info"
+                try {
+                    $prevEAP = $ErrorActionPreference
+                    $ErrorActionPreference = "Continue"
+                    try {
+                        choco install vcredist140 -y 2>&1 | Out-Null
+                    } finally {
+                        $ErrorActionPreference = $prevEAP
+                    }
+                    Write-Status "VC++ 2015-2022 installed" "Success"
+                } catch {
+                    Write-Status "Failed to install VC++ 2015-2022: $_" "Warning"
+                }
+            }
+        } else {
+            # Fallback to winget if Chocolatey not available
+            Install-WingetPackage -PackageId "Microsoft.VCRedist.2015+.x64" -Name "VC++ 2015-2022 (x64)"
+            Install-WingetPackage -PackageId "Microsoft.VCRedist.2015+.x86" -Name "VC++ 2015-2022 (x86)"
+        }
     }
 
     # DirectX
