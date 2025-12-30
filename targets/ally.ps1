@@ -943,10 +943,46 @@ function Main {
         Write-Host ""
     }
 
-    # Note: Run.ps1 handles stopping transcript and pushing to git
     Write-Host "To re-run anytime:" -ForegroundColor Gray
     Write-Host "  bootible" -ForegroundColor Gray
     Write-Host ""
+
+    # Stop transcript and push log (ally.ps1 owns the transcript)
+    if ($Script:TranscriptFile) {
+        try { Stop-Transcript | Out-Null } catch { }
+
+        # Wait for file to flush
+        Start-Sleep -Seconds 2
+
+        $privatePath = Join-Path $BootibleDir "private"
+        if ((Test-Path $privatePath) -and (Test-Path $Script:TranscriptFile)) {
+            $logFileName = Split-Path -Leaf $Script:TranscriptFile
+            $logType = if ($DryRun) { "Dry run" } else { "Run" }
+            Write-Host "[OK] $logType log saved: $logFileName" -ForegroundColor Green
+
+            # Push to git
+            $gitExe = Get-Command git -ErrorAction SilentlyContinue
+            if ($gitExe) {
+                Push-Location $privatePath
+                $prevEAP = $ErrorActionPreference
+                $ErrorActionPreference = "Continue"
+                try {
+                    $runType = if ($DryRun) { "dry run" } else { "run" }
+                    & git add "logs/$Device/$logFileName" 2>$null
+                    & git commit -m "log: $Device $runType $(Get-Date -Format 'yyyy-MM-dd HH:mm')" 2>$null
+                    cmd /c "git push 2>nul"
+                    if ($LASTEXITCODE -eq 0) {
+                        Write-Host "[OK] Log pushed to private repo" -ForegroundColor Green
+                    } else {
+                        Write-Host "[!] Could not push log" -ForegroundColor Yellow
+                    }
+                } finally {
+                    $ErrorActionPreference = $prevEAP
+                    Pop-Location
+                }
+            }
+        }
+    }
 }
 
 # Run

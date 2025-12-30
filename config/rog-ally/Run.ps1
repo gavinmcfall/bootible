@@ -625,43 +625,45 @@ if (-not $Script:DryRun) {
     Write-Host ""
 }
 
-# Stop transcript and push log to private repo
-try { Stop-Transcript | Out-Null } catch { }
+# Handle transcript and log push
+# If transcript was inherited from ally.ps1, let ally.ps1 handle stop/push
+# If we started our own transcript, we handle stop/push
+if (-not $Script:TranscriptInherited) {
+    # Stop transcript
+    try { Stop-Transcript | Out-Null } catch { }
 
-# Wait for transcript file to fully flush to disk
-Start-Sleep -Seconds 2
+    # Wait for transcript file to fully flush to disk
+    Start-Sleep -Seconds 2
 
-# Clear env var so it doesn't persist
-$env:BOOTIBLE_TRANSCRIPT = $null
+    $privatePath = Join-Path $Script:BootibleRoot "private"
+    if ((Test-Path $privatePath) -and $Script:TranscriptFile -and (Test-Path $Script:TranscriptFile)) {
+        $logFileName = Split-Path -Leaf $Script:TranscriptFile
+        $logType = if ($Script:DryRun) { "Dry run" } else { "Run" }
+        Write-Host "[OK] $logType log saved: $logFileName" -ForegroundColor Green
 
-$privatePath = Join-Path $Script:BootibleRoot "private"
-if ((Test-Path $privatePath) -and (Test-Path $Script:TranscriptFile)) {
-    $logFileName = Split-Path -Leaf $Script:TranscriptFile
-    $logType = if ($Script:DryRun) { "Dry run" } else { "Run" }
-    Write-Host "[OK] $logType log saved: $logFileName" -ForegroundColor Green
-
-    # Push to git
-    $gitExe = Get-Command git -ErrorAction SilentlyContinue
-    if ($gitExe) {
-        Push-Location $privatePath
-        $prevEAP = $ErrorActionPreference
-        $ErrorActionPreference = "Continue"
-        try {
-            $runType = if ($Script:DryRun) { "dry run" } else { "run" }
-            & git add "logs/rog-ally/$logFileName" 2>$null
-            & git commit -m "log: rog-ally $runType $(Get-Date -Format 'yyyy-MM-dd HH:mm')" 2>$null
-            cmd /c "git push 2>nul"
-            if ($LASTEXITCODE -eq 0) {
-                Write-Host "[OK] Log pushed to private repo" -ForegroundColor Green
-            } else {
-                Write-Host "[!] Could not push log" -ForegroundColor Yellow
+        # Push to git
+        $gitExe = Get-Command git -ErrorAction SilentlyContinue
+        if ($gitExe) {
+            Push-Location $privatePath
+            $prevEAP = $ErrorActionPreference
+            $ErrorActionPreference = "Continue"
+            try {
+                $runType = if ($Script:DryRun) { "dry run" } else { "run" }
+                & git add "logs/rog-ally/$logFileName" 2>$null
+                & git commit -m "log: rog-ally $runType $(Get-Date -Format 'yyyy-MM-dd HH:mm')" 2>$null
+                cmd /c "git push 2>nul"
+                if ($LASTEXITCODE -eq 0) {
+                    Write-Host "[OK] Log pushed to private repo" -ForegroundColor Green
+                } else {
+                    Write-Host "[!] Could not push log" -ForegroundColor Yellow
+                }
+            } finally {
+                $ErrorActionPreference = $prevEAP
+                Pop-Location
             }
-        } finally {
-            $ErrorActionPreference = $prevEAP
-            Pop-Location
         }
+    } elseif ($Script:TranscriptFile -and (Test-Path $Script:TranscriptFile)) {
+        # Temp file - clean up
+        Remove-Item $Script:TranscriptFile -Force -ErrorAction SilentlyContinue
     }
-} elseif (Test-Path $Script:TranscriptFile) {
-    # Temp file - clean up
-    Remove-Item $Script:TranscriptFile -Force -ErrorAction SilentlyContinue
 }
