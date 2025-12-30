@@ -347,23 +347,13 @@ function Install-WingetPackage {
     # Try winget source first
     if ($Script:HasWingetSource) {
         Write-Host "    Trying winget source..." -ForegroundColor Gray
-        $result = winget install --id $PackageId --source winget --architecture x64 --accept-source-agreements --accept-package-agreements --silent 2>&1
+        # Don't force architecture - let winget choose the right one
+        $result = winget install --id $PackageId --source winget --accept-source-agreements --accept-package-agreements --silent 2>&1
         $exitCode = $LASTEXITCODE
 
         if ($exitCode -eq 0) {
             Write-Status "$Name installed (winget)" "Success"
             return $true
-        }
-
-        # If x64 failed, try without architecture constraint
-        if ($exitCode -eq -1978335138) {
-            Write-Host "    x64 not available, trying any architecture..." -ForegroundColor Gray
-            $result = winget install --id $PackageId --source winget --accept-source-agreements --accept-package-agreements --silent 2>&1
-            $exitCode = $LASTEXITCODE
-            if ($exitCode -eq 0) {
-                Write-Status "$Name installed (winget)" "Success"
-                return $true
-            }
         }
 
         Write-Host "    Winget source failed (exit code $exitCode)" -ForegroundColor Yellow
@@ -506,14 +496,14 @@ $modulesPath = Join-Path $Script:DeviceRoot "modules"
 
 $moduleOrder = @(
     "base",
-    "debloat",
-    "apps",
+    "apps",           # Install apps first so debloat can configure them
     "gaming",
     "streaming",
     "remote_access",
     "emulation",
-    "optimization",
-    "rog_ally"
+    "rog_ally",
+    "optimization",   # Optimization after all installs
+    "debloat"         # Debloat last (configures installed apps like PS7)
 )
 
 foreach ($moduleName in $moduleOrder) {
