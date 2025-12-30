@@ -248,12 +248,17 @@ function Authenticate-GitHub {
         return $false
     }
 
-    # Check if already authenticated
+    # Check if already authenticated (suppress error output)
     Write-Host "    Checking GitHub auth status..." -ForegroundColor Gray
-    & gh auth status 2>&1 | Out-Null
-    if ($LASTEXITCODE -eq 0) {
+    $origErrorPref = $ErrorActionPreference
+    $ErrorActionPreference = "SilentlyContinue"
+    $null = & gh auth status 2>&1
+    $authExitCode = $LASTEXITCODE
+    $ErrorActionPreference = $origErrorPref
+
+    if ($authExitCode -eq 0) {
         Write-Status "Already authenticated with GitHub" "Success"
-        gh auth setup-git 2>$null
+        & gh auth setup-git 2>&1 | Out-Null
         return $true
     }
 
