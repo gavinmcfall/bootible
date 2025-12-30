@@ -123,7 +123,7 @@ if (-not $userCode) {
 }
 
 # Show popup
-$url = "https://github.com/login/device?user_code=$userCode"
+$url = "https://github.com/login/device?code=$userCode"
 $qr = "https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=$([uri]::EscapeDataString($url))"
 $ui = Show-DeviceCodePopup -Code $userCode -QrUrl $qr
 
