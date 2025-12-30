@@ -25,12 +25,14 @@
 # Detect this and re-run as a saved script file instead.
 if (-not $env:BOOTIBLE_DIRECT) {
     $scriptPath = "$env:TEMP\bootible-bootstrap.ps1"
-    $scriptUrl = "https://raw.githubusercontent.com/gavinmcfall/bootible/main/targets/ally.ps1"
+    # Use cache-busting timestamp to avoid GitHub raw CDN caching
+    $cacheBuster = [DateTimeOffset]::UtcNow.ToUnixTimeSeconds()
+    $scriptUrl = "https://raw.githubusercontent.com/gavinmcfall/bootible/main/targets/ally.ps1?cb=$cacheBuster"
 
     Write-Host "Downloading bootible..." -ForegroundColor Cyan
     try {
         [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
-        Invoke-WebRequest -Uri $scriptUrl -OutFile $scriptPath -UseBasicParsing
+        Invoke-WebRequest -Uri $scriptUrl -OutFile $scriptPath -UseBasicParsing -Headers @{"Cache-Control"="no-cache"}
         # Run with bypass to avoid execution policy issues, pass env var
         Start-Process -FilePath "powershell.exe" -ArgumentList "-ExecutionPolicy Bypass -NoProfile -Command `"& { `$env:BOOTIBLE_DIRECT='1'; & '$scriptPath' }`"" -Wait -NoNewWindow
         return

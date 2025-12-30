@@ -583,10 +583,14 @@ export default {
     // Handle script routes (proxy from GitHub)
     const route = ROUTES[path];
     if (route) {
-      const scriptUrl = `${GITHUB_RAW_BASE}${route.path}`;
+      // Add cache-buster to bypass GitHub's raw CDN cache
+      const cacheBuster = Date.now();
+      const scriptUrl = `${GITHUB_RAW_BASE}${route.path}?cb=${cacheBuster}`;
 
       try {
-        const response = await fetch(scriptUrl);
+        const response = await fetch(scriptUrl, {
+          headers: { 'Cache-Control': 'no-cache' },
+        });
 
         if (!response.ok) {
           return new Response(`Failed to fetch script: ${response.status}`, {
@@ -600,7 +604,7 @@ export default {
         return new Response(script, {
           headers: {
             'Content-Type': 'text/plain; charset=utf-8',
-            'Cache-Control': `public, max-age=${SCRIPT_CACHE_TTL}`,
+            'Cache-Control': 'no-cache, no-store, must-revalidate',
             'X-Bootible-Device': route.description,
           },
         });
