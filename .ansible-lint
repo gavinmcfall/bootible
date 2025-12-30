@@ -16,6 +16,7 @@ skip_list:
   - name[template]     # Allow variables in task names
   - command-instead-of-module  # Sometimes shell is necessary
   - risky-shell-pipe   # We handle errors appropriately
+  - var-naming[no-role-prefix]  # Variable prefixes not enforced in this project
 
 # Warn but don't fail on these
 warn_list:

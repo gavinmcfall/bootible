@@ -269,7 +269,6 @@ prefer_ipv4: true                 # Prefer IPv4 over IPv6
 disable_teredo: true              # Disable Teredo tunneling
 
 # Performance
-disable_fullscreen_optimizations: true  # Better gaming performance
 set_services_manual: true         # Set non-essential services to manual
 
 # PowerShell

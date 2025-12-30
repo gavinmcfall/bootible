@@ -1,5 +1,6 @@
 # yamllint configuration
 # https://yamllint.readthedocs.io/en/stable/configuration.html
+# Configured to be compatible with ansible-lint requirements
 
 extends: default
 
@@ -12,9 +13,10 @@ rules:
   # Allow multiple documents in one file
   document-start: disable
 
-  # Be lenient with comments
+  # Be lenient with comments - disable indentation check for ansible-lint compatibility
   comments:
     min-spaces-from-content: 1
+  comments-indentation: false
 
   # Allow both styles of truthy values
   truthy:
@@ -24,6 +26,15 @@ rules:
   indentation:
     spaces: 2
     indent-sequences: consistent
+
+  # Braces settings for ansible-lint compatibility
+  braces:
+    max-spaces-inside: 1
+
+  # Octal values settings for ansible-lint compatibility
+  octal-values:
+    forbid-implicit-octal: true
+    forbid-explicit-octal: true
 
 ignore: |
   .github/

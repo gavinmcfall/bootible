@@ -18,8 +18,10 @@ jobs:
         with:
           python-version: '3.11'
 
-      - name: Install ansible-lint
-        run: pip install ansible-lint
+      - name: Install ansible-lint and dependencies
+        run: |
+          pip install ansible-lint ansible
+          ansible-galaxy collection install community.general
 
       - name: Run ansible-lint
         run: ansible-lint config/steamdeck/
@@ -114,8 +116,10 @@ jobs:
           ALLY_HASH=$(sha256sum targets/ally.ps1 | cut -d' ' -f1)
           DECK_HASH=$(sha256sum targets/deck.sh | cut -d' ' -f1)
 
-          ALLY_EXPECTED=$(grep -oP "'/rog'.*?sha256: '\K[a-f0-9]{64}" cloudflare/_worker.js)
-          DECK_EXPECTED=$(grep -oP "'/deck'.*?sha256: '\K[a-f0-9]{64}" cloudflare/_worker.js)
+          # Extract checksums from the ROUTES object (format: sha256: 'hash')
+          # ally.ps1 is the first sha256, deck.sh is the second
+          ALLY_EXPECTED=$(grep -oP "sha256: '\K[a-f0-9]{64}" cloudflare/_worker.js | head -1)
+          DECK_EXPECTED=$(grep -oP "sha256: '\K[a-f0-9]{64}" cloudflare/_worker.js | tail -1)
 
           FAILED=0
 

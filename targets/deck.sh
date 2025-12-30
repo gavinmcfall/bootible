@@ -49,6 +49,7 @@ detect_device() {
 
     # Check for SteamOS / Steam Deck
     if [[ -f /etc/os-release ]]; then
+        # shellcheck source=/dev/null
         source /etc/os-release
 
         if [[ "$ID" == "steamos" ]] || [[ "$VARIANT_ID" == "steamdeck" ]]; then
@@ -156,7 +157,9 @@ install_ansible() {
         if command -v ansible-playbook &> /dev/null; then
             echo -e "${GREEN}✓${NC} Ansible installed via pip"
             # Persist PATH for future sessions if not already in bashrc
+            # shellcheck disable=SC2016  # Intentional: check for literal string, not expanded
             if [[ -f "$HOME/.bashrc" ]] && ! grep -q '$HOME/.local/bin' "$HOME/.bashrc"; then
+                # shellcheck disable=SC2016  # Intentional: write literal $HOME, not expanded
                 echo 'export PATH="$HOME/.local/bin:$PATH"' >> "$HOME/.bashrc"
                 echo -e "${GREEN}✓${NC} Added ~/.local/bin to PATH in .bashrc"
             fi
@@ -248,7 +251,8 @@ select_config() {
     # If only one config, use it automatically
     if [[ ${#CONFIG_FILES[@]} -eq 1 ]]; then
         SELECTED_CONFIG="${CONFIG_FILES[0]}"
-        local config_name=$(basename "$SELECTED_CONFIG")
+        local config_name
+        config_name=$(basename "$SELECTED_CONFIG")
         echo -e "${GREEN}✓${NC} Using config: $config_name"
         return
     fi
@@ -257,7 +261,8 @@ select_config() {
     echo -e "${CYAN}Multiple configurations found:${NC}"
     echo ""
     for i in "${!CONFIG_FILES[@]}"; do
-        local config_name=$(basename "${CONFIG_FILES[$i]}")
+        local config_name
+        config_name=$(basename "${CONFIG_FILES[$i]}")
         local num=$((i + 1))
         echo -e "  ${YELLOW}$num${NC}) $config_name"
     done
@@ -270,7 +275,8 @@ select_config() {
         if [[ "$selection" =~ ^[0-9]+$ ]] && [[ "$selection" -ge 1 ]] && [[ "$selection" -le ${#CONFIG_FILES[@]} ]]; then
             local idx=$((selection - 1))
             SELECTED_CONFIG="${CONFIG_FILES[$idx]}"
-            local config_name=$(basename "$SELECTED_CONFIG")
+            local config_name
+            config_name=$(basename "$SELECTED_CONFIG")
             echo ""
             echo -e "${GREEN}✓${NC} Selected: $config_name"
             return
@@ -299,6 +305,7 @@ run_playbook() {
     case $DEVICE in
         steamdeck)
             if [[ -n "$EXTRA_VARS" ]]; then
+                # shellcheck disable=SC2086  # Intentional word splitting for ansible args
                 ansible-playbook playbook.yml $EXTRA_VARS --ask-become-pass < /dev/tty
             else
                 ansible-playbook playbook.yml --ask-become-pass < /dev/tty
