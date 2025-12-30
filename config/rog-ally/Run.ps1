@@ -278,14 +278,33 @@ function Install-WingetPackage {
 
     Write-Status "Installing $Name..." "Info"
     try {
-        $result = winget install --id $PackageId --accept-source-agreements --accept-package-agreements --silent 2>&1
-        if ($LASTEXITCODE -eq 0) {
+        # Use x64 architecture explicitly for ROG Ally
+        $result = winget install --id $PackageId --architecture x64 --accept-source-agreements --accept-package-agreements --silent 2>&1
+        $exitCode = $LASTEXITCODE
+
+        if ($exitCode -eq 0) {
             Write-Status "$Name installed" "Success"
             return $true
-        } else {
-            Write-Status "Failed to install $Name (exit code $LASTEXITCODE)" "Warning"
-            return $false
         }
+
+        # If x64 failed, try without architecture constraint
+        if ($exitCode -eq -1978335138) {
+            Write-Host "    x64 not available, trying any architecture..." -ForegroundColor Gray
+            $result = winget install --id $PackageId --accept-source-agreements --accept-package-agreements --silent 2>&1
+            $exitCode = $LASTEXITCODE
+            if ($exitCode -eq 0) {
+                Write-Status "$Name installed" "Success"
+                return $true
+            }
+        }
+
+        # Show actual error output
+        Write-Status "Failed to install $Name (exit code $exitCode)" "Warning"
+        $errorLines = $result | Where-Object { $_ -match "error|fail|not found|applicable" } | Select-Object -First 3
+        foreach ($line in $errorLines) {
+            Write-Host "    $line" -ForegroundColor Yellow
+        }
+        return $false
     } catch {
         Write-Status "Failed to install $Name : $_" "Error"
         return $false
