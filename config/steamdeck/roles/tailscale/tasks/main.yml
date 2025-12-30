@@ -41,13 +41,13 @@
 # - Check if daemon is running: `systemctl status tailscaled`
 
 ---
+# The Flatpak version is recommended because it survives SteamOS updates.
+# Limitation: May not auto-start as reliably as the pacman version.
+# Make sure Tailscale is connected before leaving home!
 - name: Install Tailscale via Flatpak
   community.general.flatpak:
     name: com.tailscale.IPNQt
     state: present
-  # The Flatpak version is recommended because it survives SteamOS updates.
-  # Limitation: May not auto-start as reliably as the pacman version.
-  # Make sure Tailscale is connected before leaving home!
 
 - name: Display Tailscale setup instructions
   ansible.builtin.debug:

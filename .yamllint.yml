@@ -1,0 +1,31 @@
+# yamllint configuration
+# https://yamllint.readthedocs.io/en/stable/configuration.html
+
+extends: default
+
+rules:
+  # Allow longer lines for readability
+  line-length:
+    max: 200
+    level: warning
+
+  # Allow multiple documents in one file
+  document-start: disable
+
+  # Be lenient with comments
+  comments:
+    min-spaces-from-content: 1
+
+  # Allow both styles of truthy values
+  truthy:
+    allowed-values: ['true', 'false', 'yes', 'no']
+
+  # Indentation settings
+  indentation:
+    spaces: 2
+    indent-sequences: consistent
+
+ignore: |
+  .github/
+  private/
+  node_modules/

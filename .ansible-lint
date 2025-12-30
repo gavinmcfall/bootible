@@ -1,0 +1,26 @@
+# Ansible-lint configuration
+# https://ansible.readthedocs.io/projects/lint/configuring/
+
+profile: moderate
+
+# Paths to exclude from linting
+exclude_paths:
+  - .github/
+  - private/
+  - cloudflare/
+  - targets/
+
+# Skip certain rules that are too strict for this project
+skip_list:
+  - yaml[line-length]  # Long lines in tasks are often readable
+  - name[template]     # Allow variables in task names
+  - command-instead-of-module  # Sometimes shell is necessary
+  - risky-shell-pipe   # We handle errors appropriately
+
+# Warn but don't fail on these
+warn_list:
+  - no-changed-when
+  - ignore-errors
+
+# Enable offline mode (don't fetch Galaxy roles)
+offline: true
