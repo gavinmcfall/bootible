@@ -25,14 +25,22 @@
 # Detect this and re-run as a saved script file instead.
 if (-not $env:BOOTIBLE_DIRECT) {
     $scriptPath = "$env:TEMP\bootible-bootstrap.ps1"
-    # Use cache-busting timestamp to avoid GitHub raw CDN caching
-    $cacheBuster = [DateTimeOffset]::UtcNow.ToUnixTimeSeconds()
-    $scriptUrl = "https://raw.githubusercontent.com/gavinmcfall/bootible/main/targets/ally.ps1?cb=$cacheBuster"
+    # Use bootible.dev which includes SHA256 integrity verification
+    # Falls back to raw GitHub if bootible.dev is unavailable
+    $primaryUrl = "https://bootible.dev/rog"
+    $fallbackUrl = "https://raw.githubusercontent.com/gavinmcfall/bootible/main/targets/ally.ps1"
 
-    Write-Host "Downloading bootible..." -ForegroundColor Cyan
+    Write-Host "Downloading bootible (with integrity verification)..." -ForegroundColor Cyan
     try {
         [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
-        Invoke-WebRequest -Uri $scriptUrl -OutFile $scriptPath -UseBasicParsing -Headers @{"Cache-Control"="no-cache"}
+        try {
+            # Primary: bootible.dev with built-in SHA256 verification
+            Invoke-WebRequest -Uri $primaryUrl -OutFile $scriptPath -UseBasicParsing -Headers @{"Cache-Control"="no-cache"} -TimeoutSec 30
+        } catch {
+            Write-Host "  bootible.dev unavailable, using GitHub fallback..." -ForegroundColor Yellow
+            Write-Host "  WARNING: GitHub fallback bypasses integrity verification" -ForegroundColor Yellow
+            Invoke-WebRequest -Uri $fallbackUrl -OutFile $scriptPath -UseBasicParsing -Headers @{"Cache-Control"="no-cache"}
+        }
         # Run with bypass to avoid execution policy issues, pass env var
         Start-Process -FilePath "powershell.exe" -ArgumentList "-ExecutionPolicy Bypass -NoProfile -Command `"& { `$env:BOOTIBLE_DIRECT='1'; & '$scriptPath' }`"" -Wait -NoNewWindow
         return

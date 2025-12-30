@@ -19,7 +19,7 @@ const ROUTES = {
   '/rog': {
     path: '/targets/ally.ps1',
     description: 'ROG Ally (Windows)',
-    sha256: '843698aac756d97f9876c603979b2aafab363da3ef57f5295ec8db5246428948',
+    sha256: '18cdb0680d22f4dcee8cc81c9b4cca76a3c60c95bf0548a4c66b285ead8a6321',
   },
   '/deck': {
     path: '/targets/deck.sh',
