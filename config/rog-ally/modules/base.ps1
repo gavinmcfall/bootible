@@ -115,18 +115,14 @@ if ($staticIpEnabled) {
 # WINGET SETUP
 # =============================================================================
 
-# Refresh winget source (skip msstore which often has issues)
-Write-Status "Refreshing winget source..." "Info"
+# Update winget source (don't reset - it can delete the source on some systems)
+Write-Status "Updating winget source..." "Info"
 try {
     # winget outputs to stderr which triggers ErrorActionPreference=Stop
     # Temporarily allow stderr without throwing
     $prevEAP = $ErrorActionPreference
     $ErrorActionPreference = "Continue"
     try {
-        # Reset and update only the winget source
-        Write-Host "    Resetting winget source..." -ForegroundColor Gray
-        $null = winget source reset --name winget --force 2>&1
-
         Write-Host "    Updating package index..." -ForegroundColor Gray
         $null = winget source update --name winget --accept-source-agreements 2>&1
 
@@ -137,13 +133,12 @@ try {
     }
 
     if ($testResult -match "Microsoft.PowerShell") {
-        Write-Status "Winget source refreshed and verified" "Success"
+        Write-Status "Winget source updated and verified" "Success"
     } else {
-        Write-Status "Winget source updated but verification unclear" "Warning"
+        Write-Status "Winget source update completed" "Warning"
     }
 } catch {
-    Write-Status "Could not refresh winget source: $_" "Warning"
-    Write-Status "Try running 'winget source reset --name winget --force' manually" "Info"
+    Write-Status "Could not update winget source: $_" "Warning"
 }
 
 # Install essential utilities
