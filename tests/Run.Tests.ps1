@@ -10,81 +10,10 @@
 #>
 
 BeforeAll {
-    # Source the main script to get function definitions
-    # We mock the admin check and other side effects
-    $script:OriginalErrorAction = $ErrorActionPreference
-    $ErrorActionPreference = 'SilentlyContinue'
-
-    # Extract just the functions from Run.ps1 (skip the execution part)
-    $runScript = Get-Content -Path "$PSScriptRoot/../config/rog-ally/Run.ps1" -Raw
-
-    # Define the helper functions we want to test
-    # These are extracted patterns that don't have side effects
-
-    function Merge-Configs {
-        param(
-            [hashtable]$Base,
-            [hashtable]$Override
-        )
-
-        $result = $Base.Clone()
-
-        foreach ($key in $Override.Keys) {
-            if ($result.ContainsKey($key) -and $result[$key] -is [hashtable] -and $Override[$key] -is [hashtable]) {
-                $result[$key] = Merge-Configs $result[$key] $Override[$key]
-            } else {
-                $result[$key] = $Override[$key]
-            }
-        }
-
-        return $result
-    }
-
-    function Get-ConfigValue {
-        param(
-            [hashtable]$Config,
-            [string]$Key,
-            $Default = $null
-        )
-
-        $keys = $Key -split '\.'
-        $value = $Config
-
-        foreach ($k in $keys) {
-            if ($value -is [hashtable] -and $value.ContainsKey($k)) {
-                $value = $value[$k]
-            } else {
-                return $Default
-            }
-        }
-
-        return $value
-    }
-
-    function Convert-OrderedDictToHashtable {
-        param($OrderedDict)
-
-        $hashtable = @{}
-        foreach ($key in $OrderedDict.Keys) {
-            $value = $OrderedDict[$key]
-            if ($value -is [System.Collections.Specialized.OrderedDictionary]) {
-                $hashtable[$key] = Convert-OrderedDictToHashtable $value
-            } elseif ($value -is [System.Collections.IList] -and $value -isnot [string]) {
-                $hashtable[$key] = @($value | ForEach-Object {
-                    if ($_ -is [System.Collections.Specialized.OrderedDictionary]) {
-                        Convert-OrderedDictToHashtable $_
-                    } else {
-                        $_
-                    }
-                })
-            } else {
-                $hashtable[$key] = $value
-            }
-        }
-        return $hashtable
-    }
-
-    $ErrorActionPreference = $script:OriginalErrorAction
+    # Import the shared helper functions from the lib directory
+    # This ensures tests use the same code as production
+    $helpersPath = Join-Path $PSScriptRoot "../config/rog-ally/lib/helpers.ps1"
+    . $helpersPath
 }
 
 Describe "Merge-Configs" {

@@ -33,6 +33,12 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
+
+# Import shared helper functions (used by tests too)
+$helpersPath = Join-Path $PSScriptRoot "lib/helpers.ps1"
+if (Test-Path $helpersPath) {
+    . $helpersPath
+}
 $Script:BootibleRoot = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
 $Script:DeviceRoot = $PSScriptRoot
 $Script:Config = @{}
@@ -262,47 +268,7 @@ function Import-YamlConfig {
     }
 }
 
-function Convert-OrderedDictToHashtable {
-    param($OrderedDict)
-
-    $hashtable = @{}
-    foreach ($key in $OrderedDict.Keys) {
-        $value = $OrderedDict[$key]
-        if ($value -is [System.Collections.Specialized.OrderedDictionary]) {
-            $hashtable[$key] = Convert-OrderedDictToHashtable $value
-        } elseif ($value -is [System.Collections.IList] -and $value -isnot [string]) {
-            $hashtable[$key] = @($value | ForEach-Object {
-                if ($_ -is [System.Collections.Specialized.OrderedDictionary]) {
-                    Convert-OrderedDictToHashtable $_
-                } else {
-                    $_
-                }
-            })
-        } else {
-            $hashtable[$key] = $value
-        }
-    }
-    return $hashtable
-}
-
-function Merge-Configs {
-    param(
-        [hashtable]$Base,
-        [hashtable]$Override
-    )
-
-    $result = $Base.Clone()
-
-    foreach ($key in $Override.Keys) {
-        if ($result.ContainsKey($key) -and $result[$key] -is [hashtable] -and $Override[$key] -is [hashtable]) {
-            $result[$key] = Merge-Configs $result[$key] $Override[$key]
-        } else {
-            $result[$key] = $Override[$key]
-        }
-    }
-
-    return $result
-}
+# Note: Convert-OrderedDictToHashtable and Merge-Configs are imported from lib/helpers.ps1
 
 function Install-WingetPackage {
     param(
