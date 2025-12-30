@@ -308,6 +308,7 @@ install_system_utilities: true
 install_revo_uninstaller: true    # Advanced uninstaller
 install_ccleaner: true            # System cleaner
 install_wiztree: true             # Fast disk space analyzer
+install_drivereasy: false         # Driver updater utility
 
 # =============================================================================
 # RUNTIMES & DEPENDENCIES
