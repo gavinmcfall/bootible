@@ -114,7 +114,14 @@ $resp = Invoke-RestMethod -Uri "https://github.com/login/device/code" -Method Po
 $userCode = $resp.user_code
 $deviceCode = $resp.device_code
 $interval = $resp.interval
-$url = $resp.verification_uri_complete  # GitHub provides URL with code pre-filled!
+
+# Use verification_uri_complete if available, otherwise construct it
+$url = $resp.verification_uri_complete
+if (-not $url) {
+    $url = "https://github.com/login/device?user_code=$userCode"
+}
+
+Write-Host "URL: $url" -ForegroundColor Gray  # Debug
 
 if (-not $userCode) {
     Write-Host "Failed to get code!" -ForegroundColor Red
