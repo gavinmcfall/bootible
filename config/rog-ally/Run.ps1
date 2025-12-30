@@ -628,8 +628,8 @@ if (-not $Script:DryRun) {
 # Stop transcript and push log to private repo
 try { Stop-Transcript | Out-Null } catch { }
 
-# Wait for transcript file to flush to disk
-Start-Sleep -Milliseconds 500
+# Wait for transcript file to fully flush to disk
+Start-Sleep -Seconds 2
 
 # Clear env var so it doesn't persist
 $env:BOOTIBLE_TRANSCRIPT = $null
