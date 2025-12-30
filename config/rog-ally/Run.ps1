@@ -208,9 +208,9 @@ function Ensure-YamlModule {
     if (-not (Get-Module -ListAvailable -Name powershell-yaml)) {
         Write-Status "Installing powershell-yaml module..." "Info"
         try {
-            # Check for network connectivity first
+            # Check for network connectivity first (use TCP on 443, ICMP often blocked)
             $galleryHost = "www.powershellgallery.com"
-            $canReachGallery = Test-Connection -ComputerName $galleryHost -Count 1 -Quiet -ErrorAction SilentlyContinue
+            $canReachGallery = (Test-NetConnection -ComputerName $galleryHost -Port 443 -WarningAction SilentlyContinue -ErrorAction SilentlyContinue).TcpTestSucceeded
             if (-not $canReachGallery) {
                 Write-Status "Cannot reach PowerShell Gallery (offline or blocked)" "Warning"
                 Write-Host ""
