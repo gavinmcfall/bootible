@@ -195,14 +195,35 @@ function Ensure-YamlModule {
     <#
     .SYNOPSIS
         Ensures the powershell-yaml module is installed for proper YAML parsing.
+    .DESCRIPTION
+        For offline environments, pre-install the module:
+        Install-Module -Name powershell-yaml -Scope CurrentUser
     #>
     if (-not (Get-Module -ListAvailable -Name powershell-yaml)) {
         Write-Status "Installing powershell-yaml module..." "Info"
         try {
+            # Check for network connectivity first
+            $canReachGallery = Test-Connection -ComputerName "www.powershellgallery.com" -Count 1 -Quiet -ErrorAction SilentlyContinue
+            if (-not $canReachGallery) {
+                Write-Status "Cannot reach PowerShell Gallery (offline or blocked)" "Warning"
+                Write-Host ""
+                Write-Host "  To use Bootible offline, pre-install the YAML module:" -ForegroundColor Yellow
+                Write-Host "    Install-Module -Name powershell-yaml -Scope CurrentUser" -ForegroundColor Cyan
+                Write-Host ""
+                Write-Host "  Or on another machine, save it for transfer:" -ForegroundColor Yellow
+                Write-Host "    Save-Module -Name powershell-yaml -Path C:\Modules" -ForegroundColor Cyan
+                Write-Host ""
+                return $false
+            }
+
             Install-Module -Name powershell-yaml -Force -Scope CurrentUser -AllowClobber -ErrorAction Stop
             Write-Status "powershell-yaml module installed" "Success"
         } catch {
             Write-Status "Failed to install powershell-yaml: $($_.Exception.Message)" "Error"
+            Write-Host ""
+            Write-Host "  Manual installation:" -ForegroundColor Yellow
+            Write-Host "    Install-Module -Name powershell-yaml -Scope CurrentUser" -ForegroundColor Cyan
+            Write-Host ""
             return $false
         }
     }
