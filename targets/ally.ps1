@@ -212,9 +212,18 @@ function Configure-GitCredentials {
     if (-not $script:GitExe) { return }
 
     Write-Host "    Configuring Git credential manager..." -ForegroundColor Gray
-    & $script:GitExe config --global credential.helper manager 2>$null
-    & $script:GitExe config --global credential.guiPrompt true 2>$null
-    & $script:GitExe config --global credential.useHttpPath true 2>$null
+    $configErrors = @()
+    $result = & $script:GitExe config --global credential.helper manager 2>&1
+    if ($LASTEXITCODE -ne 0) { $configErrors += "credential.helper: $result" }
+    $result = & $script:GitExe config --global credential.guiPrompt true 2>&1
+    if ($LASTEXITCODE -ne 0) { $configErrors += "credential.guiPrompt: $result" }
+    $result = & $script:GitExe config --global credential.useHttpPath true 2>&1
+    if ($LASTEXITCODE -ne 0) { $configErrors += "credential.useHttpPath: $result" }
+
+    if ($configErrors.Count -gt 0) {
+        Write-Host "    Warning: Some git config settings failed:" -ForegroundColor Yellow
+        $configErrors | ForEach-Object { Write-Host "      $_" -ForegroundColor Yellow }
+    }
 }
 
 function Show-DeviceCodePopup {
@@ -408,7 +417,8 @@ function Authenticate-GitHub {
                     break
                 }
             } catch {
-                # Ignore polling errors, keep trying
+                # Expected during polling (authorization_pending), but track for debugging
+                $script:LastOAuthError = $_.Exception.Message
             }
         }
 
@@ -450,7 +460,10 @@ function Authenticate-GitHub {
         try {
             if (-not $proc.HasExited) { $proc.Kill() }
             Get-Process -Name "gh" -ErrorAction SilentlyContinue | Where-Object { $_.StartTime -gt (Get-Date).AddMinutes(-5) } | Stop-Process -Force -ErrorAction SilentlyContinue
-        } catch {}
+        } catch {
+            # Process cleanup failed - non-critical, continue with auth check
+            Write-Host "    Note: Process cleanup failed: $($_.Exception.Message)" -ForegroundColor Gray
+        }
 
         $ErrorActionPreference = "SilentlyContinue"
         $null = & gh auth status 2>&1
@@ -565,7 +578,7 @@ function Setup-Private {
                 } else {
                     # Fall back to git with credential helper (avoid token in URL for security)
                     $token = $null
-                    try { $token = gh auth token 2>$null } catch {}
+                    try { $token = gh auth token 2>$null } catch { $token = $null }
 
                     if ($token) {
                         # Use GIT_ASKPASS to provide token securely (not visible in process args)
