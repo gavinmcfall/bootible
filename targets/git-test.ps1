@@ -94,8 +94,12 @@ if (-not $gh) {
 }
 
 # Check if already authed
+$ErrorActionPreference = "SilentlyContinue"
 $null = & gh auth status 2>&1
-if ($LASTEXITCODE -eq 0) {
+$authed = $LASTEXITCODE -eq 0
+$ErrorActionPreference = "Stop"
+
+if ($authed) {
     Write-Host "Already authenticated!" -ForegroundColor Green
     gh auth status
     return
