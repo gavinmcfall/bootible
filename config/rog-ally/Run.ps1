@@ -105,9 +105,14 @@ function Initialize-WingetSources {
     #>
     Write-Header "WINGET SOURCE INITIALIZATION"
 
+    # winget outputs to stderr which triggers ErrorActionPreference=Stop
+    # Temporarily allow stderr without throwing
+    $prevEAP = $ErrorActionPreference
+    $ErrorActionPreference = "Continue"
+
     # Step 1: Reset sources to clean state
     Write-Status "Resetting winget sources..." "Info"
-    $resetResult = winget source reset --force 2>&1
+    $resetResult = winget source reset --force 2>&1 | Out-String
     if ($LASTEXITCODE -ne 0) {
         Write-Status "Source reset warning: $resetResult" "Warning"
     } else {
@@ -116,7 +121,7 @@ function Initialize-WingetSources {
 
     # Step 2: Update sources
     Write-Status "Updating winget sources..." "Info"
-    $updateResult = winget source update 2>&1
+    $updateResult = winget source update 2>&1 | Out-String
     if ($LASTEXITCODE -ne 0) {
         Write-Status "Source update warning: $updateResult" "Warning"
     } else {
@@ -125,7 +130,7 @@ function Initialize-WingetSources {
 
     # Step 3: List and verify sources
     Write-Status "Verifying winget sources..." "Info"
-    $sourceList = winget source list 2>&1
+    $sourceList = winget source list 2>&1 | Out-String
 
     # Check if winget source exists
     $hasWingetSource = $sourceList -match "winget"
@@ -134,7 +139,7 @@ function Initialize-WingetSources {
     # If winget source missing, add it explicitly
     if (-not $hasWingetSource) {
         Write-Status "Winget source missing - adding explicitly..." "Warning"
-        $addResult = winget source add --name winget --arg "https://cdn.winget.microsoft.com/cache" --type "Microsoft.PreIndexed.Package" 2>&1
+        $addResult = winget source add --name winget --arg "https://cdn.winget.microsoft.com/cache" --type "Microsoft.PreIndexed.Package" 2>&1 | Out-String
         if ($LASTEXITCODE -ne 0) {
             Write-Status "Failed to add winget source: $addResult" "Error"
         } else {
@@ -142,14 +147,17 @@ function Initialize-WingetSources {
             $hasWingetSource = $true
         }
         # Refresh source list
-        $sourceList = winget source list 2>&1
+        $sourceList = winget source list 2>&1 | Out-String
     }
+
+    # Restore ErrorActionPreference now that winget calls are done
+    $ErrorActionPreference = $prevEAP
 
     # Display source status
     Write-Host ""
     Write-Host "  Available Sources:" -ForegroundColor Cyan
     Write-Host "  ------------------" -ForegroundColor Cyan
-    foreach ($line in $sourceList) {
+    foreach ($line in ($sourceList -split "`n")) {
         if ($line -match "^\s*\w") {
             Write-Host "  $line" -ForegroundColor White
         }
@@ -297,18 +305,26 @@ function Install-WingetPackage {
         $foundInWinget = $false
         $foundInMsStore = $false
 
-        if ($Script:HasWingetSource) {
-            $showResult = winget show --id $PackageId --source winget --accept-source-agreements 2>&1
-            if ($LASTEXITCODE -eq 0 -and $showResult -match "Found") {
-                $foundInWinget = $true
+        # winget outputs to stderr which triggers ErrorActionPreference=Stop
+        # Temporarily allow stderr without throwing
+        $prevEAP = $ErrorActionPreference
+        $ErrorActionPreference = "Continue"
+        try {
+            if ($Script:HasWingetSource) {
+                $showResult = winget show --id $PackageId --source winget --accept-source-agreements 2>&1 | Out-String
+                if ($LASTEXITCODE -eq 0 -and $showResult -match "Found") {
+                    $foundInWinget = $true
+                }
             }
-        }
 
-        if (-not $foundInWinget -and $Script:HasMsStoreSource) {
-            $showResult = winget show --id $PackageId --source msstore --accept-source-agreements 2>&1
-            if ($LASTEXITCODE -eq 0 -and $showResult -match "Found") {
-                $foundInMsStore = $true
+            if (-not $foundInWinget -and $Script:HasMsStoreSource) {
+                $showResult = winget show --id $PackageId --source msstore --accept-source-agreements 2>&1 | Out-String
+                if ($LASTEXITCODE -eq 0 -and $showResult -match "Found") {
+                    $foundInMsStore = $true
+                }
             }
+        } finally {
+            $ErrorActionPreference = $prevEAP
         }
 
         if ($foundInWinget) {

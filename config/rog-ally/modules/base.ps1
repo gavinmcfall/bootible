@@ -118,15 +118,24 @@ if ($staticIpEnabled) {
 # Refresh winget source (skip msstore which often has issues)
 Write-Status "Refreshing winget source..." "Info"
 try {
-    # Reset and update only the winget source
-    Write-Host "    Resetting winget source..." -ForegroundColor Gray
-    $null = winget source reset --name winget --force 2>&1
+    # winget outputs to stderr which triggers ErrorActionPreference=Stop
+    # Temporarily allow stderr without throwing
+    $prevEAP = $ErrorActionPreference
+    $ErrorActionPreference = "Continue"
+    try {
+        # Reset and update only the winget source
+        Write-Host "    Resetting winget source..." -ForegroundColor Gray
+        $null = winget source reset --name winget --force 2>&1
 
-    Write-Host "    Updating package index..." -ForegroundColor Gray
-    $null = winget source update --name winget --accept-source-agreements 2>&1
+        Write-Host "    Updating package index..." -ForegroundColor Gray
+        $null = winget source update --name winget --accept-source-agreements 2>&1
 
-    # Verify source is working
-    $testResult = winget search "Microsoft.PowerShell" --source winget --accept-source-agreements 2>&1
+        # Verify source is working
+        $testResult = winget search "Microsoft.PowerShell" --source winget --accept-source-agreements 2>&1 | Out-String
+    } finally {
+        $ErrorActionPreference = $prevEAP
+    }
+
     if ($testResult -match "Microsoft.PowerShell") {
         Write-Status "Winget source refreshed and verified" "Success"
     } else {

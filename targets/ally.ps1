@@ -640,11 +640,18 @@ function Setup-Private {
                     $repoSlug = $PrivateRepo -replace 'https://github.com/' -replace '\.git$'
                     Write-Host "    Using GitHub CLI to clone..." -ForegroundColor Gray
                     # gh outputs progress to stderr which triggers ErrorActionPreference=Stop
-                    # Capture all output and check exit code instead
-                    $cloneOutput = & gh repo clone $repoSlug $privatePath 2>&1 | Out-String
-                    if ($LASTEXITCODE -ne 0) {
+                    # Temporarily allow stderr output without throwing
+                    $prevEAP = $ErrorActionPreference
+                    $ErrorActionPreference = "Continue"
+                    try {
+                        $cloneOutput = & gh repo clone $repoSlug $privatePath 2>&1 | Out-String
+                        $cloneExitCode = $LASTEXITCODE
+                    } finally {
+                        $ErrorActionPreference = $prevEAP
+                    }
+                    if ($cloneExitCode -ne 0) {
                         Write-Host "    $cloneOutput" -ForegroundColor Red
-                        throw "gh clone failed with exit code $LASTEXITCODE"
+                        throw "gh clone failed with exit code $cloneExitCode"
                     }
                 } else {
                     # Fall back to git with credential helper (avoid token in URL for security)
