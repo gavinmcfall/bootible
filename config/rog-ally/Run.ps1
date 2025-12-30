@@ -325,14 +325,6 @@ function Install-WingetPackage {
 # MAIN EXECUTION
 # ============================================================================
 
-# Start logging
-$logsDir = Join-Path $Script:BootibleRoot "logs"
-if (-not (Test-Path $logsDir)) { New-Item -ItemType Directory -Path $logsDir -Force | Out-Null }
-$timestamp = Get-Date -Format "yyyy-MM-dd_HH-mm-ss"
-$runType = if ($DryRun) { "dryrun" } else { "run" }
-$Script:LogFile = Join-Path $logsDir "$($env:COMPUTERNAME)_$runType`_$timestamp.log"
-Start-Transcript -Path $Script:LogFile -Force | Out-Null
-
 Write-Host ""
 Write-Host "+------------------------------------------------------------+" -ForegroundColor Cyan
 Write-Host "|                      Bootible                              |" -ForegroundColor White
@@ -511,26 +503,6 @@ Write-Host "  IP Type:     $($networkInfo.IPType)"
 Write-Host "  MAC Address: $($networkInfo.MACAddress)"
 Write-Host "  Interface:   $($networkInfo.Interface)"
 Write-Host ""
-
-# Stop logging and push to git
-Stop-Transcript | Out-Null
-Write-Host "Log saved: $Script:LogFile" -ForegroundColor Gray
-
-if (Test-Path (Join-Path $Script:BootibleRoot ".git")) {
-    Write-Host "Pushing log to git..." -ForegroundColor Gray
-    try {
-        Push-Location $Script:BootibleRoot
-        $null = git add logs/ 2>&1
-        $runTypeLabel = if ($Script:DryRun) { "dry-run" } else { "run" }
-        $null = git commit -m "log: $runTypeLabel from $env:COMPUTERNAME $(Get-Date -Format 'yyyy-MM-dd HH:mm')" 2>&1
-        $null = git push 2>&1
-        Write-Host "Log pushed to git" -ForegroundColor Green
-        Pop-Location
-    } catch {
-        Write-Host "Could not push log: $_" -ForegroundColor Yellow
-        Pop-Location
-    }
-}
 
 if (-not $Script:DryRun) {
     Write-Host ""
