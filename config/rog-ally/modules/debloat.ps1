@@ -92,6 +92,37 @@ if (Get-ConfigValue "disable_copilot" $true) {
 # UI TWEAKS
 # =============================================================================
 
+# Disable Lock Screen Junk
+if (Get-ConfigValue "disable_lockscreen_junk" $true) {
+    Write-Status "Disabling lock screen tips and ads..." "Info"
+
+    # Disable lock screen tips/tricks/facts
+    Set-RegistryValue -Path "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\ContentDeliveryManager" -Name "RotatingLockScreenOverlayEnabled" -Value 0
+    Set-RegistryValue -Path "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\ContentDeliveryManager" -Name "SubscribedContent-338387Enabled" -Value 0
+
+    # Disable Windows Spotlight suggestions
+    Set-RegistryValue -Path "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\ContentDeliveryManager" -Name "SubscribedContent-338389Enabled" -Value 0
+
+    # Disable "Get fun facts, tips, tricks" on lock screen
+    Set-RegistryValue -Path "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\ContentDeliveryManager" -Name "SubscribedContent-338393Enabled" -Value 0
+
+    # Disable suggested content in Settings
+    Set-RegistryValue -Path "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\ContentDeliveryManager" -Name "SubscribedContent-353694Enabled" -Value 0
+    Set-RegistryValue -Path "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\ContentDeliveryManager" -Name "SubscribedContent-353696Enabled" -Value 0
+
+    # Disable app suggestions
+    Set-RegistryValue -Path "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\ContentDeliveryManager" -Name "SoftLandingEnabled" -Value 0
+    Set-RegistryValue -Path "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\ContentDeliveryManager" -Name "SystemPaneSuggestionsEnabled" -Value 0
+
+    # Disable Start Menu suggestions
+    Set-RegistryValue -Path "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\ContentDeliveryManager" -Name "SubscribedContent-310093Enabled" -Value 0
+
+    # Disable Windows welcome experience
+    Set-RegistryValue -Path "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\ContentDeliveryManager" -Name "SubscribedContent-310091Enabled" -Value 0
+
+    Write-Status "Lock screen junk disabled" "Success"
+}
+
 # Classic Right-Click Menu (Windows 11)
 if (Get-ConfigValue "classic_right_click_menu" $true) {
     Write-Status "Enabling classic right-click menu..." "Info"
@@ -275,6 +306,116 @@ if (Get-ConfigValue "disable_powershell7_telemetry" $true) {
     }
 
     Write-Status "PowerShell 7 telemetry disabled" "Success"
+}
+
+# =============================================================================
+# PERSONALIZATION
+# =============================================================================
+
+# Set Desktop Wallpaper
+$wallpaperPath = Get-ConfigValue "wallpaper_path" ""
+if ($wallpaperPath) {
+    Write-Status "Setting desktop wallpaper..." "Info"
+
+    # Check if path is relative to private repo
+    if (-not [System.IO.Path]::IsPathRooted($wallpaperPath)) {
+        $wallpaperPath = Join-Path $Script:PrivateRoot $wallpaperPath
+    }
+
+    if (Test-Path $wallpaperPath) {
+        if ($Script:DryRun) {
+            Write-Status "[DRY RUN] Would set wallpaper to: $wallpaperPath" "Info"
+        } else {
+            try {
+                # Copy to local location for persistence
+                $localWallpaper = Join-Path $env:USERPROFILE "Pictures\bootible-wallpaper$([System.IO.Path]::GetExtension($wallpaperPath))"
+                Copy-Item -Path $wallpaperPath -Destination $localWallpaper -Force
+
+                # Set wallpaper via registry
+                Set-RegistryValue -Path "HKCU:\Control Panel\Desktop" -Name "Wallpaper" -Value $localWallpaper -Type "String"
+
+                # Set wallpaper style (2 = Stretch, 10 = Fill, 6 = Fit, 0 = Center, 22 = Span)
+                $wallpaperStyle = Get-ConfigValue "wallpaper_style" "Fill"
+                $styleValue = switch ($wallpaperStyle) {
+                    "Stretch" { "2" }
+                    "Fill" { "10" }
+                    "Fit" { "6" }
+                    "Center" { "0" }
+                    "Tile" { "0" }
+                    "Span" { "22" }
+                    default { "10" }
+                }
+                Set-RegistryValue -Path "HKCU:\Control Panel\Desktop" -Name "WallpaperStyle" -Value $styleValue -Type "String"
+
+                if ($wallpaperStyle -eq "Tile") {
+                    Set-RegistryValue -Path "HKCU:\Control Panel\Desktop" -Name "TileWallpaper" -Value "1" -Type "String"
+                } else {
+                    Set-RegistryValue -Path "HKCU:\Control Panel\Desktop" -Name "TileWallpaper" -Value "0" -Type "String"
+                }
+
+                # Apply immediately using SystemParametersInfo
+                Add-Type -TypeDefinition @"
+                    using System;
+                    using System.Runtime.InteropServices;
+                    public class Wallpaper {
+                        [DllImport("user32.dll", CharSet = CharSet.Auto)]
+                        public static extern int SystemParametersInfo(int uAction, int uParam, string lpvParam, int fuWinIni);
+                    }
+"@
+                [Wallpaper]::SystemParametersInfo(0x0014, 0, $localWallpaper, 0x01 -bor 0x02) | Out-Null
+
+                Write-Status "Wallpaper set: $(Split-Path $wallpaperPath -Leaf)" "Success"
+            } catch {
+                Write-Status "Failed to set wallpaper: $_" "Warning"
+            }
+        }
+    } else {
+        Write-Status "Wallpaper file not found: $wallpaperPath" "Warning"
+    }
+}
+
+# Set Lock Screen Image
+$lockscreenPath = Get-ConfigValue "lockscreen_path" ""
+if ($lockscreenPath) {
+    Write-Status "Setting lock screen image..." "Info"
+
+    # Check if path is relative to private repo
+    if (-not [System.IO.Path]::IsPathRooted($lockscreenPath)) {
+        $lockscreenPath = Join-Path $Script:PrivateRoot $lockscreenPath
+    }
+
+    if (Test-Path $lockscreenPath) {
+        if ($Script:DryRun) {
+            Write-Status "[DRY RUN] Would set lock screen to: $lockscreenPath" "Info"
+        } else {
+            try {
+                # Copy to local location
+                $localLockscreen = Join-Path $env:USERPROFILE "Pictures\bootible-lockscreen$([System.IO.Path]::GetExtension($lockscreenPath))"
+                Copy-Item -Path $lockscreenPath -Destination $localLockscreen -Force
+
+                # Disable Windows Spotlight (use picture instead)
+                Set-RegistryValue -Path "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Lock Screen" -Name "SlideshowEnabled" -Value 0
+
+                # Set lock screen to picture mode
+                Set-RegistryValue -Path "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\ContentDeliveryManager" -Name "RotatingLockScreenEnabled" -Value 0
+
+                # Set the lock screen image path
+                Set-RegistryValue -Path "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\PersonalizationCSP" -Name "LockScreenImagePath" -Value $localLockscreen -Type "String"
+                Set-RegistryValue -Path "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\PersonalizationCSP" -Name "LockScreenImageUrl" -Value $localLockscreen -Type "String"
+                Set-RegistryValue -Path "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\PersonalizationCSP" -Name "LockScreenImageStatus" -Value 1
+
+                # Also set via Policies for stronger enforcement
+                Set-RegistryValue -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows\Personalization" -Name "LockScreenImage" -Value $localLockscreen -Type "String"
+                Set-RegistryValue -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows\Personalization" -Name "NoChangingLockScreen" -Value 0
+
+                Write-Status "Lock screen set: $(Split-Path $lockscreenPath -Leaf)" "Success"
+            } catch {
+                Write-Status "Failed to set lock screen: $_" "Warning"
+            }
+        }
+    } else {
+        Write-Status "Lock screen file not found: $lockscreenPath" "Warning"
+    }
 }
 
 Write-Status "Debloat module complete" "Success"

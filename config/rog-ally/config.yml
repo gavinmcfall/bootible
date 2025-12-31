@@ -288,10 +288,16 @@ disable_location_tracking: true   # Disable location services
 disable_copilot: true             # Disable Microsoft Copilot
 
 # UI Tweaks
+disable_lockscreen_junk: true     # Disable lock screen tips, ads, spotlight
 classic_right_click_menu: true    # Win11 classic context menu
 disable_bing_search: true         # Remove Bing from Start Menu
 show_file_extensions: true        # Show file extensions in Explorer
 show_hidden_files: false          # Show hidden files in Explorer
+
+# Personalization (paths relative to private repo, or absolute)
+wallpaper_path: ""                # e.g., "files/wallpaper.jpg"
+wallpaper_style: "Fill"           # Fill, Fit, Stretch, Center, Tile, Span
+lockscreen_path: ""               # e.g., "files/lockscreen.jpg"
 
 # Edge
 debloat_edge: true                # Remove Edge bloat/telemetry
