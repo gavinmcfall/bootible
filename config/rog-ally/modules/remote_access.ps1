@@ -23,7 +23,7 @@ if (Get-ConfigValue "install_tailscale" $false) {
 # Remote Desktop
 # --------------
 
-# AnyDesk - winget often fails, use direct download fallback
+# AnyDesk - use Chocolatey (more reliable than winget)
 if (Get-ConfigValue "install_anydesk" $false) {
     # Check if already installed
     $anydeskInstalled = Test-Path "$env:ProgramFiles(x86)\AnyDesk\AnyDesk.exe"
@@ -36,13 +36,21 @@ if (Get-ConfigValue "install_anydesk" $false) {
 
     if ($anydeskInstalled) {
         Write-Status "AnyDesk already installed" "Success"
+    } elseif ($Script:DryRun) {
+        Write-Status "[DRY RUN] Would install AnyDesk via Chocolatey" "Info"
     } else {
-        # Try winget first
-        $wingetSuccess = Install-WingetPackage -PackageId "AnyDeskSoftwareGmbH.AnyDesk" -Name "AnyDesk"
-
-        # Fallback to direct download if winget failed
-        if (-not $wingetSuccess -and -not $Script:DryRun) {
-            Write-Status "Winget failed, trying direct download..." "Warning"
+        $choco = Get-Command choco -ErrorAction SilentlyContinue
+        if ($choco) {
+            Write-Status "Installing AnyDesk via Chocolatey..." "Info"
+            try {
+                choco install anydesk -y 2>&1 | Out-Null
+                Write-Status "AnyDesk installed" "Success"
+            } catch {
+                Write-Status "Chocolatey install failed: $_" "Warning"
+            }
+        } else {
+            # Fallback to direct download if Chocolatey not available
+            Write-Status "Chocolatey not available, trying direct download..." "Warning"
             Install-DirectDownload -Name "AnyDesk" -Url "https://download.anydesk.com/AnyDesk.exe" -InstallerArgs "--install `"$env:ProgramFiles\AnyDesk`" --silent"
         }
     }

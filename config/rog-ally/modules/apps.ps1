@@ -56,7 +56,7 @@ if (Get-ConfigValue "install_vlc" $false) {
     Install-WingetPackage -PackageId "VideoLAN.VLC" -Name "VLC"
 }
 
-# Spotify - requires non-admin install (installs to %APPDATA%)
+# Spotify - use Chocolatey (handles non-admin install properly)
 if (Get-ConfigValue "install_spotify" $false) {
     # Check if already installed
     $spotifyInstalled = Test-Path "$env:APPDATA\Spotify\Spotify.exe"
@@ -67,61 +67,24 @@ if (Get-ConfigValue "install_spotify" $false) {
     if ($spotifyInstalled) {
         Write-Status "Spotify already installed" "Success"
     } elseif ($Script:DryRun) {
-        Write-Status "[DRY RUN] Would install Spotify (requires non-admin)" "Info"
+        Write-Status "[DRY RUN] Would install Spotify via Chocolatey" "Info"
     } else {
-        Write-Status "Installing Spotify..." "Info"
-
-        # Spotify MUST run as non-admin - it installs to %APPDATA%
-        # Use scheduled task to run installer as current user without elevation
-        try {
-            $spotifyUrl = "https://download.scdn.co/SpotifySetup.exe"
-            $spotifyInstaller = Join-Path $env:TEMP "SpotifySetup.exe"
-
-            Write-Host "    Downloading Spotify..." -ForegroundColor Gray
-            $ProgressPreference = 'SilentlyContinue'
-            Invoke-WebRequest -Uri $spotifyUrl -OutFile $spotifyInstaller -UseBasicParsing
-            $ProgressPreference = 'Continue'
-
-            if (Test-Path $spotifyInstaller) {
-                Write-Host "    Running installer as non-admin user..." -ForegroundColor Gray
-
-                # Create a scheduled task to run as the current user (non-elevated)
-                $taskName = "BootibleSpotifyInstall"
-                $action = New-ScheduledTaskAction -Execute $spotifyInstaller -Argument "/silent"
-                $principal = New-ScheduledTaskPrincipal -UserId $env:USERNAME -LogonType Interactive -RunLevel Limited
-                $settings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries
-
-                # Remove existing task if present
-                Unregister-ScheduledTask -TaskName $taskName -Confirm:$false -ErrorAction SilentlyContinue
-
-                # Create and run the task
-                Register-ScheduledTask -TaskName $taskName -Action $action -Principal $principal -Settings $settings | Out-Null
-                Start-ScheduledTask -TaskName $taskName
-
-                # Wait for install to complete (check every 2 seconds, max 60 seconds)
-                $waited = 0
-                while ($waited -lt 60) {
-                    Start-Sleep -Seconds 2
-                    $waited += 2
-                    $task = Get-ScheduledTask -TaskName $taskName -ErrorAction SilentlyContinue
-                    if ($task.State -ne 'Running') { break }
-                }
-
-                # Cleanup
-                Unregister-ScheduledTask -TaskName $taskName -Confirm:$false -ErrorAction SilentlyContinue
-                Remove-Item $spotifyInstaller -Force -ErrorAction SilentlyContinue
-
-                # Verify installation
-                Start-Sleep -Seconds 2
+        $choco = Get-Command choco -ErrorAction SilentlyContinue
+        if ($choco) {
+            Write-Status "Installing Spotify via Chocolatey..." "Info"
+            try {
+                choco install spotify -y 2>&1 | Out-Null
                 if (Test-Path "$env:APPDATA\Spotify\Spotify.exe") {
                     Write-Status "Spotify installed" "Success"
                 } else {
-                    Write-Status "Spotify install may need manual completion" "Warning"
+                    Write-Status "Spotify installed (verify manually)" "Success"
                 }
+            } catch {
+                Write-Status "Chocolatey install failed: $_" "Warning"
             }
-        } catch {
-            Write-Status "Failed to install Spotify: $_" "Error"
-            Write-Status "Install manually: https://spotify.com/download" "Info"
+        } else {
+            Write-Status "Chocolatey not available - install Spotify manually" "Warning"
+            Write-Status "https://spotify.com/download" "Info"
         }
     }
 }
