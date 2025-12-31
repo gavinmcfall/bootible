@@ -75,6 +75,7 @@ if (Test-Path $helpersPath) {
 }
 $Script:BootibleRoot = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
 $Script:DeviceRoot = $PSScriptRoot
+$Script:PrivateRoot = Join-Path $Script:BootibleRoot "private"
 $Script:Config = @{}
 
 # ============================================================================
