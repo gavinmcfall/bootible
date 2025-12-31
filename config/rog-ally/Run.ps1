@@ -826,16 +826,19 @@ if (-not $Script:TranscriptInherited) {
                 if (-not (Test-Path $logRelPath)) {
                     Write-Host "[!] Log file not found: $logRelPath" -ForegroundColor Yellow
                 } else {
-                    & git add $logRelPath 2>$null
+                    # Stage all log files (including any from failed previous runs)
+                    & git add "logs/rog-ally/*.log" 2>$null
 
                     # Check if there's anything to commit
-                    $status = & git status --porcelain $logRelPath 2>$null
-                    if ($status) {
-                        & git commit -m "log: rog-ally $runType $(Get-Date -Format 'yyyy-MM-dd HH:mm')" 2>$null
-                        $commitExit = $LASTEXITCODE
+                    $stagedFiles = & git diff --cached --name-only 2>$null
+                    if ($stagedFiles) {
+                        # Commit with output captured to verify success
+                        $commitOutput = & git commit -m "log: rog-ally $runType $(Get-Date -Format 'yyyy-MM-dd HH:mm')" 2>&1
 
-                        if ($commitExit -eq 0) {
-                            # Try push - if SSH fails, temporarily disable and retry with HTTPS
+                        # Verify commit actually happened by checking if files are still staged
+                        $stillStaged = & git diff --cached --name-only 2>$null
+                        if (-not $stillStaged) {
+                            # Commit succeeded, now push
                             cmd /c "git push 2>nul"
                             if ($LASTEXITCODE -ne 0) {
                                 # Check if SSH rewrite is configured
@@ -853,7 +856,7 @@ if (-not $Script:TranscriptInherited) {
                                 Write-Host "[!] Commit saved locally, push failed" -ForegroundColor Yellow
                             }
                         } else {
-                            Write-Host "[!] Failed to commit log" -ForegroundColor Yellow
+                            Write-Host "[!] Commit failed: $commitOutput" -ForegroundColor Yellow
                         }
                     } else {
                         Write-Host "[OK] Log saved (no changes to push)" -ForegroundColor Gray
