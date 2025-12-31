@@ -1,12 +1,12 @@
-# SSH Module - SSH Server & Key Setup
-# ====================================
-# Configures SSH server for remote access and generates keys for GitHub auth.
+# SSH Module - SSH Server Setup
+# =============================
+# Configures SSH server for remote access to this device.
 #
 # Features:
+# - Set network profile to Private (required for SSH)
 # - Enable OpenSSH Server for remote access to this device
 # - Import authorized keys from private repo (allow other machines to SSH in)
-# - Generate SSH keys for this device
-# - Add keys to GitHub for git operations
+# - Enable ICMPv4 (ping) responses
 #
 # Security notes:
 # - Use Tailscale or similar for secure access over internet
@@ -18,11 +18,40 @@ if (-not (Get-ConfigValue "install_ssh" $false)) {
 }
 
 # =============================================================================
+# NETWORK PROFILE (Set to Private for SSH access)
+# =============================================================================
+# Public profile blocks more connections. Set to Private for SSH to work.
+
+$enableSshServer = Get-ConfigValue "ssh_server_enable" $false
+
+if ($enableSshServer) {
+    $networkAdapter = Get-ConfigValue "static_ip.adapter" "Wi-Fi"
+
+    if ($Script:DryRun) {
+        Write-Status "[DRY RUN] Would set $networkAdapter network profile to Private" "Info"
+    } else {
+        try {
+            $profile = Get-NetConnectionProfile -InterfaceAlias $networkAdapter -ErrorAction SilentlyContinue
+            if ($profile) {
+                if ($profile.NetworkCategory -ne 'Private') {
+                    Set-NetConnectionProfile -InterfaceAlias $networkAdapter -NetworkCategory Private
+                    Write-Status "Network profile set to Private for $networkAdapter" "Success"
+                } else {
+                    Write-Status "Network profile already Private for $networkAdapter" "Info"
+                }
+            } else {
+                Write-Status "Could not find network adapter: $networkAdapter" "Warning"
+            }
+        } catch {
+            Write-Status "Failed to set network profile: $_" "Warning"
+        }
+    }
+}
+
+# =============================================================================
 # SSH SERVER (OpenSSH Server)
 # =============================================================================
 # Enable SSH server so other machines can SSH into this device.
-
-$enableSshServer = Get-ConfigValue "ssh_server_enable" $false
 
 if ($enableSshServer) {
     Write-Status "Configuring OpenSSH Server..." "Info"
@@ -97,16 +126,40 @@ if ($enableSshServer) {
                 Write-Status "SSH Server service not found after install - restart may be required" "Warning"
             }
 
-            # Configure firewall rule
-            $fwRule = Get-NetFirewallRule -Name 'OpenSSH-Server-In-TCP' -ErrorAction SilentlyContinue
-            if (-not $fwRule) {
-                New-NetFirewallRule -Name 'OpenSSH-Server-In-TCP' -DisplayName 'OpenSSH Server (sshd)' `
-                    -Enabled True -Direction Inbound -Protocol TCP -Action Allow -LocalPort 22 | Out-Null
-                Write-Status "Firewall rule added for SSH (port 22)" "Success"
-            }
-
         } catch {
             Write-Status "Failed to configure SSH Server: $_" "Error"
+        }
+    }
+
+    # Configure SSH firewall rule (check for existing first)
+    if ($Script:DryRun) {
+        Write-Status "[DRY RUN] Would ensure SSH firewall rule exists" "Info"
+    } else {
+        try {
+            # Check for existing SSH rules
+            $existingSshRule = Get-NetFirewallRule -DisplayName "*SSH*" -ErrorAction SilentlyContinue |
+                Where-Object { $_.Direction -eq "Inbound" -and $_.Enabled -eq 'True' }
+
+            if (-not $existingSshRule) {
+                # Also check by port
+                $sshByPort = Get-NetFirewallRule -ErrorAction SilentlyContinue | Where-Object {
+                    $_.Direction -eq "Inbound" -and $_.Enabled -eq 'True'
+                } | Get-NetFirewallPortFilter -ErrorAction SilentlyContinue | Where-Object {
+                    $_.LocalPort -eq 22 -and $_.Protocol -eq "TCP"
+                }
+
+                if (-not $sshByPort) {
+                    New-NetFirewallRule -DisplayName "Allow SSH" -Direction Inbound `
+                        -Protocol TCP -LocalPort 22 -Action Allow | Out-Null
+                    Write-Status "SSH firewall rule created (port 22)" "Success"
+                } else {
+                    Write-Status "SSH firewall rule already exists (port 22)" "Info"
+                }
+            } else {
+                Write-Status "SSH firewall rule already exists" "Info"
+            }
+        } catch {
+            Write-Status "Failed to configure SSH firewall rule: $_" "Warning"
         }
     }
 }
@@ -115,6 +168,10 @@ if ($enableSshServer) {
 # AUTHORIZED KEYS (Allow other machines to SSH in)
 # =============================================================================
 # Import public keys from private repo to allow SSH access from those machines.
+# Windows OpenSSH uses different locations for admin vs non-admin users:
+# - Admin: C:\ProgramData\ssh\administrators_authorized_keys
+# - Non-admin: %USERPROFILE%\.ssh\authorized_keys
+# We copy to BOTH locations to ensure SSH works regardless of how user connects.
 
 $importAuthorizedKeys = Get-ConfigValue "ssh_import_authorized_keys" $false
 $authorizedKeysList = Get-ConfigValue "ssh_authorized_keys" @()
@@ -122,31 +179,21 @@ $authorizedKeysList = Get-ConfigValue "ssh_authorized_keys" @()
 if ($importAuthorizedKeys -and $authorizedKeysList.Count -gt 0) {
     Write-Status "Importing authorized SSH keys..." "Info"
 
-    # Windows OpenSSH uses different authorized_keys location for admins
-    $isAdmin = ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
-
-    if ($isAdmin) {
-        # Admin users use ProgramData location
-        $authorizedKeysPath = Join-Path $env:ProgramData "ssh\administrators_authorized_keys"
-        $sshConfigDir = Join-Path $env:ProgramData "ssh"
-    } else {
-        # Regular users use ~/.ssh/authorized_keys
-        $authorizedKeysPath = Join-Path $env:USERPROFILE ".ssh\authorized_keys"
-        $sshConfigDir = Join-Path $env:USERPROFILE ".ssh"
-    }
+    # Define both locations
+    $adminKeysPath = Join-Path $env:ProgramData "ssh\administrators_authorized_keys"
+    $adminSshDir = Join-Path $env:ProgramData "ssh"
+    $userKeysPath = Join-Path $env:USERPROFILE ".ssh\authorized_keys"
+    $userSshDir = Join-Path $env:USERPROFILE ".ssh"
 
     if ($Script:DryRun) {
-        Write-Status "[DRY RUN] Would import authorized keys to: $authorizedKeysPath" "Info"
+        Write-Status "[DRY RUN] Would import authorized keys to:" "Info"
+        Write-Status "[DRY RUN]   - $adminKeysPath (admin)" "Info"
+        Write-Status "[DRY RUN]   - $userKeysPath (user)" "Info"
         foreach ($keyFile in $authorizedKeysList) {
-            Write-Status "[DRY RUN]   - $keyFile" "Info"
+            Write-Status "[DRY RUN]   Key: $keyFile" "Info"
         }
     } else {
         try {
-            # Ensure directory exists
-            if (-not (Test-Path $sshConfigDir)) {
-                New-Item -ItemType Directory -Path $sshConfigDir -Force | Out-Null
-            }
-
             # Build authorized_keys content from private repo
             # Check both possible locations: ssh-keys/ and files/ssh-keys/
             $keysContent = @()
@@ -174,21 +221,39 @@ if ($importAuthorizedKeys -and $authorizedKeysList.Count -gt 0) {
             }
 
             if ($keysContent.Count -gt 0) {
-                # Write authorized_keys file
-                $keysContent -join "`n" | Set-Content -Path $authorizedKeysPath -Force -NoNewline
+                $keysData = $keysContent -join "`n"
 
-                # Set correct permissions for Windows OpenSSH
-                if ($isAdmin) {
-                    # administrators_authorized_keys needs special ACL
-                    # Use icacls directly - PowerShell ACL commands don't always work correctly
-                    Write-Host "    Setting permissions on administrators_authorized_keys..." -ForegroundColor Gray
-                    icacls $authorizedKeysPath /inheritance:r /grant "SYSTEM:F" /grant "Administrators:F" | Out-Null
-                    if ($LASTEXITCODE -ne 0) {
-                        Write-Status "Warning: Could not set permissions with icacls" "Warning"
-                    }
+                # === ADMIN LOCATION ===
+                # Ensure ProgramData\ssh directory exists
+                if (-not (Test-Path $adminSshDir)) {
+                    New-Item -ItemType Directory -Path $adminSshDir -Force | Out-Null
                 }
+                # Write administrators_authorized_keys
+                $keysData | Set-Content -Path $adminKeysPath -Force -NoNewline
+                # Set correct permissions - only SYSTEM and Administrators
+                Write-Host "    Setting permissions on administrators_authorized_keys..." -ForegroundColor Gray
+                icacls $adminKeysPath /inheritance:r /grant "SYSTEM:F" /grant "Administrators:F" 2>&1 | Out-Null
+                if ($LASTEXITCODE -ne 0) {
+                    Write-Status "Warning: Could not set admin permissions with icacls" "Warning"
+                }
+                Write-Status "Admin authorized_keys updated: $adminKeysPath" "Success"
 
-                Write-Status "Authorized keys imported ($($keysContent.Count) keys)" "Success"
+                # === USER LOCATION ===
+                # Ensure ~/.ssh directory exists
+                if (-not (Test-Path $userSshDir)) {
+                    New-Item -ItemType Directory -Path $userSshDir -Force | Out-Null
+                }
+                # Write user authorized_keys
+                $keysData | Set-Content -Path $userKeysPath -Force -NoNewline
+                # Set correct permissions - only the current user
+                Write-Host "    Setting permissions on user authorized_keys..." -ForegroundColor Gray
+                icacls $userKeysPath /inheritance:r /grant "$($env:USERNAME):F" 2>&1 | Out-Null
+                if ($LASTEXITCODE -ne 0) {
+                    Write-Status "Warning: Could not set user permissions with icacls" "Warning"
+                }
+                Write-Status "User authorized_keys updated: $userKeysPath" "Success"
+
+                Write-Status "Authorized keys imported to both locations ($($keysContent.Count) keys)" "Success"
             }
         } catch {
             Write-Status "Failed to import authorized keys: $_" "Error"
@@ -197,215 +262,40 @@ if ($importAuthorizedKeys -and $authorizedKeysList.Count -gt 0) {
 }
 
 # =============================================================================
-# SSH KEY GENERATION
+# ICMP (Ping) - Enable ping responses
 # =============================================================================
+# Enable ICMPv4 Echo Request so the device responds to ping.
 
-$sshDir = Join-Path $env:USERPROFILE ".ssh"
-$keyName = Get-ConfigValue "ssh_key_name" $env:COMPUTERNAME
-$keyPath = Join-Path $sshDir "id_ed25519"
-$keyComment = "$keyName@bootible"
+$enableIcmp = Get-ConfigValue "ssh_enable_icmp" $true
 
-# Ensure .ssh directory exists with correct permissions
-if (-not (Test-Path $sshDir)) {
+if ($enableSshServer -and $enableIcmp) {
     if ($Script:DryRun) {
-        Write-Status "[DRY RUN] Would create ~/.ssh directory" "Info"
+        Write-Status "[DRY RUN] Would enable ICMPv4 Echo Request (ping)" "Info"
     } else {
-        New-Item -ItemType Directory -Path $sshDir -Force | Out-Null
-        # Set permissions - only current user should have access
-        $acl = Get-Acl $sshDir
-        $acl.SetAccessRuleProtection($true, $false)
-        $userRule = New-Object System.Security.AccessControl.FileSystemAccessRule(
-            $env:USERNAME, "FullControl", "ContainerInherit,ObjectInherit", "None", "Allow"
-        )
-        $acl.AddAccessRule($userRule)
-        Set-Acl $sshDir $acl
-        Write-Status "Created ~/.ssh directory" "Success"
-    }
-}
+        try {
+            # Check for existing ICMPv4 inbound rule
+            $existingIcmpRule = Get-NetFirewallRule -DisplayName "*ICMP*" -ErrorAction SilentlyContinue |
+                Where-Object { $_.Direction -eq "Inbound" -and $_.Enabled -eq 'True' }
 
-# Generate SSH key if it doesn't exist
-$generateKey = Get-ConfigValue "ssh_generate_key" $true
-
-if ($generateKey) {
-    if (Test-Path $keyPath) {
-        Write-Status "SSH key already exists: $keyPath" "Info"
-    } else {
-        if ($Script:DryRun) {
-            Write-Status "[DRY RUN] Would generate SSH key: $keyPath" "Info"
-            Write-Status "[DRY RUN] Key comment: $keyComment" "Info"
-        } else {
-            Write-Status "Generating SSH key (ed25519)..." "Info"
-            try {
-                # Generate ed25519 key (modern, secure, fast)
-                # -N "" means no passphrase (for automated use)
-                $sshKeygenPath = "ssh-keygen"
-
-                # Check if ssh-keygen exists
-                $sshKeygen = Get-Command $sshKeygenPath -ErrorAction SilentlyContinue
-                if (-not $sshKeygen) {
-                    # Try Windows OpenSSH location
-                    $sshKeygenPath = Join-Path $env:SystemRoot "System32\OpenSSH\ssh-keygen.exe"
-                    if (-not (Test-Path $sshKeygenPath)) {
-                        throw "ssh-keygen not found. Install OpenSSH Client feature."
-                    }
-                }
-
-                # Generate the key
-                & $sshKeygenPath -t ed25519 -C $keyComment -f $keyPath -N '""' 2>&1 | Out-Null
-
-                if (Test-Path $keyPath) {
-                    Write-Status "SSH key generated: $keyPath" "Success"
-                    Write-Status "Key comment: $keyComment" "Info"
+            if (-not $existingIcmpRule) {
+                # Also check vm-monitoring rule
+                $vmIcmpRule = Get-NetFirewallRule -Name "vm-monitoring-icmpv4" -ErrorAction SilentlyContinue
+                if ($vmIcmpRule -and $vmIcmpRule.Enabled -eq 'False') {
+                    Enable-NetFirewallRule -Name "vm-monitoring-icmpv4"
+                    Write-Status "ICMPv4 Echo Request enabled (vm-monitoring)" "Success"
+                } elseif ($vmIcmpRule) {
+                    Write-Status "ICMPv4 already enabled (vm-monitoring)" "Info"
                 } else {
-                    throw "Key file not created"
+                    # Create new ICMPv4 rule
+                    New-NetFirewallRule -DisplayName "Allow ICMPv4-In" -Protocol ICMPv4 `
+                        -IcmpType 8 -Direction Inbound -Action Allow | Out-Null
+                    Write-Status "ICMPv4 Echo Request rule created" "Success"
                 }
-            } catch {
-                Write-Status "Failed to generate SSH key: $_" "Error"
-            }
-        }
-    }
-}
-
-# =============================================================================
-# GITHUB SSH KEY SETUP
-# =============================================================================
-
-$addToGithub = Get-ConfigValue "ssh_add_to_github" $true
-$Script:GitHubSshKeyReady = $false  # Track if key is ready on GitHub
-
-if ($addToGithub -and (Test-Path "$keyPath.pub")) {
-    # Check if gh CLI is available and authenticated
-    $gh = Get-Command gh -ErrorAction SilentlyContinue
-    if (-not $gh) {
-        Write-Status "GitHub CLI (gh) not found - cannot add key to GitHub" "Warning"
-        Write-Status "Run bootible again after gh is installed to add key" "Info"
-    } else {
-        # Check if already authenticated
-        $authStatus = gh auth status 2>&1
-        if ($LASTEXITCODE -ne 0) {
-            Write-Status "GitHub CLI not authenticated - cannot add key" "Warning"
-            Write-Status "Run 'gh auth login' first, then run bootible again" "Info"
-        } else {
-            if ($Script:DryRun) {
-                Write-Status "[DRY RUN] Would add SSH key to GitHub: $keyComment" "Info"
-                $Script:GitHubSshKeyReady = $true
             } else {
-                Write-Status "Adding SSH key to GitHub..." "Info"
-                try {
-                    # Check if key already exists on GitHub
-                    $existingKeys = gh ssh-key list 2>&1
-                    $pubKeyContent = Get-Content "$keyPath.pub" -Raw
-                    $keyFingerprint = $pubKeyContent.Split(" ")[1]
-
-                    if ($existingKeys -match [regex]::Escape($keyComment)) {
-                        Write-Status "SSH key '$keyComment' already exists on GitHub" "Info"
-                        $Script:GitHubSshKeyReady = $true
-                    } else {
-                        # Add the key
-                        $result = gh ssh-key add "$keyPath.pub" --title $keyComment 2>&1
-                        if ($LASTEXITCODE -eq 0) {
-                            Write-Status "SSH key added to GitHub: $keyComment" "Success"
-                            $Script:GitHubSshKeyReady = $true
-                        } else {
-                            # Key might already exist with different title
-                            if ($result -match "already in use") {
-                                Write-Status "SSH key already registered on GitHub (different title)" "Info"
-                                $Script:GitHubSshKeyReady = $true
-                            } else {
-                                throw $result
-                            }
-                        }
-                    }
-                } catch {
-                    Write-Status "Failed to add SSH key to GitHub: $_" "Error"
-                }
-            }
-        }
-    }
-}
-
-# =============================================================================
-# SAVE PUBLIC KEY TO PRIVATE REPO
-# =============================================================================
-
-$saveToPrivate = Get-ConfigValue "ssh_save_to_private" $true
-$privateRepoPath = Get-ConfigValue "ssh_private_repo_path" ""
-
-# Auto-detect private repo path if not specified
-if (-not $privateRepoPath -and $Script:PrivateRoot) {
-    $privateRepoPath = $Script:PrivateRoot
-}
-
-if ($saveToPrivate -and $privateRepoPath -and (Test-Path "$keyPath.pub")) {
-    $keysDir = Join-Path $privateRepoPath "ssh-keys"
-    $keyBackupPath = Join-Path $keysDir "$keyName.pub"
-
-    if ($Script:DryRun) {
-        Write-Status "[DRY RUN] Would save public key to: $keyBackupPath" "Info"
-    } else {
-        try {
-            # Create ssh-keys directory if needed
-            if (-not (Test-Path $keysDir)) {
-                New-Item -ItemType Directory -Path $keysDir -Force | Out-Null
-            }
-
-            # Copy public key
-            Copy-Item "$keyPath.pub" $keyBackupPath -Force
-            Write-Status "Public key saved to private repo: ssh-keys/$keyName.pub" "Success"
-
-            # Git add (will be committed with log push)
-            Push-Location $privateRepoPath
-            git add "ssh-keys/$keyName.pub" 2>&1 | Out-Null
-            Pop-Location
-        } catch {
-            Write-Status "Failed to save public key to private repo: $_" "Warning"
-        }
-    }
-}
-
-# =============================================================================
-# SSH-AGENT SETUP (for manual SSH use)
-# =============================================================================
-# Don't auto-configure git to use SSH - too many edge cases.
-# User can manually run: git config --global url."git@github.com:".insteadOf "https://github.com/"
-
-# Just ensure ssh-agent is running and key is loaded for manual use
-if (Test-Path $keyPath) {
-    if ($Script:DryRun) {
-        Write-Status "[DRY RUN] Would add key to ssh-agent" "Info"
-    } else {
-        try {
-            $sshAgent = Get-Service ssh-agent -ErrorAction SilentlyContinue
-            if ($sshAgent) {
-                if ($sshAgent.Status -ne 'Running') {
-                    Start-Service ssh-agent -ErrorAction SilentlyContinue
-                }
-                ssh-add $keyPath 2>&1 | Out-Null
-                Write-Status "SSH key added to ssh-agent" "Success"
+                Write-Status "ICMPv4 firewall rule already enabled" "Info"
             }
         } catch {
-            Write-Status "Could not add key to ssh-agent: $_" "Warning"
-        }
-    }
-}
-
-# =============================================================================
-# DISPLAY KEY INFO
-# =============================================================================
-
-if (Test-Path "$keyPath.pub") {
-    $pubKey = Get-Content "$keyPath.pub" -Raw
-    Write-Status "Public key fingerprint:" "Info"
-    # Get fingerprint using ssh-keygen if available
-    $fingerprint = ssh-keygen -lf "$keyPath.pub" 2>&1
-    if ($LASTEXITCODE -eq 0) {
-        Write-Host "  $fingerprint" -ForegroundColor Cyan
-    } else {
-        # Fallback: show truncated key
-        $keyParts = $pubKey.Split(" ")
-        if ($keyParts.Count -ge 2) {
-            $truncated = $keyParts[1].Substring(0, [Math]::Min(20, $keyParts[1].Length)) + "..."
-            Write-Host "  $($keyParts[0]) $truncated" -ForegroundColor Cyan
+            Write-Status "Failed to enable ICMPv4: $_" "Warning"
         }
     }
 }
