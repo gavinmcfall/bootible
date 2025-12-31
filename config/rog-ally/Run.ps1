@@ -318,7 +318,8 @@ function Install-WingetPackage {
     param(
         [string]$PackageId,
         [string]$Name,
-        [switch]$Force
+        [switch]$Force,
+        [int]$TimeoutSeconds = 120  # 2 minute timeout per source
     )
 
     # Check if already installed first (even in DryRun)
@@ -379,40 +380,69 @@ function Install-WingetPackage {
 
     Write-Status "Installing $Name..." "Info"
 
+    # Helper function to run winget with timeout
+    $runWingetWithTimeout = {
+        param($PackageId, $Source, $TimeoutSeconds)
+
+        $job = Start-Job -ScriptBlock {
+            param($id, $src)
+            $result = winget install --id $id --source $src --accept-source-agreements --accept-package-agreements --silent 2>&1
+            @{ ExitCode = $LASTEXITCODE; Output = $result }
+        } -ArgumentList $PackageId, $Source
+
+        $completed = Wait-Job $job -Timeout $TimeoutSeconds
+
+        if ($completed) {
+            $jobResult = Receive-Job $job
+            Remove-Job $job -Force
+            return $jobResult
+        } else {
+            # Timeout - kill the job and any winget processes it spawned
+            Stop-Job $job -ErrorAction SilentlyContinue
+            Remove-Job $job -Force -ErrorAction SilentlyContinue
+            # Kill any hanging winget processes
+            Get-Process -Name "winget" -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
+            return @{ ExitCode = -1; Output = "Timeout after $TimeoutSeconds seconds"; TimedOut = $true }
+        }
+    }
+
     # Try winget source first
     if ($Script:HasWingetSource) {
-        Write-Host "    Trying winget source..." -ForegroundColor Gray
-        # Don't force architecture - let winget choose the right one
-        $result = winget install --id $PackageId --source winget --accept-source-agreements --accept-package-agreements --silent 2>&1
-        $exitCode = $LASTEXITCODE
+        Write-Host "    Trying winget source (${TimeoutSeconds}s timeout)..." -ForegroundColor Gray
+        $result = & $runWingetWithTimeout $PackageId "winget" $TimeoutSeconds
 
-        if ($exitCode -eq 0) {
+        if ($result.TimedOut) {
+            Write-Host "    Winget timed out after ${TimeoutSeconds}s" -ForegroundColor Yellow
+        } elseif ($result.ExitCode -eq 0) {
             Write-Status "$Name installed (winget)" "Success"
             return $true
+        } else {
+            Write-Host "    Winget source failed (exit code $($result.ExitCode))" -ForegroundColor Yellow
         }
-
-        Write-Host "    Winget source failed (exit code $exitCode)" -ForegroundColor Yellow
     }
 
     # Fallback to msstore
     if ($Script:HasMsStoreSource) {
-        Write-Host "    Falling back to msstore..." -ForegroundColor Yellow
-        $result = winget install --id $PackageId --source msstore --accept-source-agreements --accept-package-agreements --silent 2>&1
-        $exitCode = $LASTEXITCODE
+        Write-Host "    Falling back to msstore (${TimeoutSeconds}s timeout)..." -ForegroundColor Yellow
+        $result = & $runWingetWithTimeout $PackageId "msstore" $TimeoutSeconds
 
-        if ($exitCode -eq 0) {
+        if ($result.TimedOut) {
+            Write-Host "    msstore timed out after ${TimeoutSeconds}s" -ForegroundColor Red
+        } elseif ($result.ExitCode -eq 0) {
             Write-Status "$Name installed (msstore fallback)" "Success"
             return $true
+        } else {
+            Write-Host "    msstore also failed (exit code $($result.ExitCode))" -ForegroundColor Red
         }
-
-        Write-Host "    msstore also failed (exit code $exitCode)" -ForegroundColor Red
     }
 
     # Both sources failed - show error details
     Write-Status "Failed to install $Name from all sources" "Warning"
-    $errorLines = $result | Where-Object { $_ -match "error|fail|not found|applicable" } | Select-Object -First 3
-    foreach ($line in $errorLines) {
-        Write-Host "    $line" -ForegroundColor Yellow
+    if ($result.Output -and -not $result.TimedOut) {
+        $errorLines = $result.Output | Where-Object { $_ -match "error|fail|not found|applicable" } | Select-Object -First 3
+        foreach ($line in $errorLines) {
+            Write-Host "    $line" -ForegroundColor Yellow
+        }
     }
     return $false
 }
