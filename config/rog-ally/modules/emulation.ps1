@@ -11,6 +11,32 @@ if (-not (Get-ConfigValue "install_emulation" $false)) {
     return
 }
 
+# Check if EmuDeck is already installed
+$emudeckInstalled = $false
+$emudeckPaths = @(
+    "$env:USERPROFILE\emudeck",
+    "$env:USERPROFILE\EmuDeck",
+    "$env:APPDATA\EmuDeck",
+    "$env:LOCALAPPDATA\EmuDeck"
+)
+
+foreach ($path in $emudeckPaths) {
+    if (Test-Path $path) {
+        # Check for settings file or app as confirmation
+        if ((Test-Path "$path\settings.sh") -or (Test-Path "$path\EmuDeck.exe") -or (Get-ChildItem $path -ErrorAction SilentlyContinue | Measure-Object).Count -gt 5) {
+            $emudeckInstalled = $true
+            Write-Status "EmuDeck already installed at: $path" "Success"
+            break
+        }
+    }
+}
+
+if ($emudeckInstalled) {
+    Write-Status "Skipping EmuDeck installer - already installed" "Info"
+    Write-Status "Run the EmuDeck app to update or reconfigure" "Info"
+    return
+}
+
 Write-Status "Setting up EmuDeck..." "Info"
 
 # Check for private EA script first
