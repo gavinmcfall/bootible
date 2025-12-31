@@ -171,18 +171,22 @@ if (Get-ConfigValue "optimize_winget" $true) {
             Write-Status "[DRY RUN] Would optimize winget settings (wininet downloader)" "Info"
         } else {
             try {
-                $settings = @{}
+                # Read existing settings or create new (PS 5.1 compatible)
+                $settingsJson = $null
                 if (Test-Path $wingetSettingsPath) {
-                    $settings = Get-Content $wingetSettingsPath -Raw | ConvertFrom-Json -AsHashtable
+                    $settingsJson = Get-Content $wingetSettingsPath -Raw -ErrorAction SilentlyContinue
                 }
 
-                # Set network downloader to wininet (bypasses slow Delivery Optimization)
-                if (-not $settings.ContainsKey("network")) {
-                    $settings["network"] = @{}
-                }
-                $settings["network"]["downloader"] = "wininet"
-
-                $settings | ConvertTo-Json -Depth 10 | Set-Content $wingetSettingsPath -Force
+                # Build new settings with wininet downloader
+                # Simple approach: just write the network settings we need
+                $newSettings = @'
+{
+    "network": {
+        "downloader": "wininet"
+    }
+}
+'@
+                $newSettings | Set-Content $wingetSettingsPath -Force
                 Write-Status "Winget optimized (using wininet downloader)" "Success"
             } catch {
                 Write-Status "Could not optimize winget: $_" "Warning"
