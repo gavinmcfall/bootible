@@ -94,7 +94,7 @@ if (Get-ConfigValue "disable_copilot" $true) {
 
 # Disable Lock Screen Junk
 if (Get-ConfigValue "disable_lockscreen_junk" $true) {
-    Write-Status "Disabling lock screen tips and ads..." "Info"
+    Write-Status "Disabling lock screen tips, ads, and widgets..." "Info"
 
     # Disable lock screen tips/tricks/facts
     Set-RegistryValue -Path "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\ContentDeliveryManager" -Name "RotatingLockScreenOverlayEnabled" -Value 0
@@ -120,7 +120,20 @@ if (Get-ConfigValue "disable_lockscreen_junk" $true) {
     # Disable Windows welcome experience
     Set-RegistryValue -Path "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\ContentDeliveryManager" -Name "SubscribedContent-310091Enabled" -Value 0
 
-    Write-Status "Lock screen junk disabled" "Success"
+    # Disable Lock Screen Widgets (Weather, News, etc.)
+    Set-RegistryValue -Path "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Notifications\Settings\Windows.LockScreen.MediaWidget" -Name "Enabled" -Value 0
+    Set-RegistryValue -Path "HKLM:\SOFTWARE\Policies\Microsoft\Dsh" -Name "AllowNewsAndInterests" -Value 0
+    Set-RegistryValue -Path "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Feeds" -Name "ShellFeedsTaskbarViewMode" -Value 2
+    Set-RegistryValue -Path "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Advanced" -Name "TaskbarDa" -Value 0
+
+    # Disable Widgets completely (Windows 11)
+    Set-RegistryValue -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows\Windows Feeds" -Name "EnableFeeds" -Value 0
+    Set-RegistryValue -Path "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Advanced" -Name "TaskbarMn" -Value 0
+
+    # Disable lock screen status/widgets via policy
+    Set-RegistryValue -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows\System" -Name "DisableLockScreenAppNotifications" -Value 1
+
+    Write-Status "Lock screen junk and widgets disabled" "Success"
 }
 
 # Classic Right-Click Menu (Windows 11)
