@@ -43,10 +43,13 @@ if (-not $adapter) { $adapter = "Ethernet" }
 if ($staticIpEnabled) {
     $address = $staticIpConfig.address
     $prefixLength = $staticIpConfig.prefix_length
+    if (-not $prefixLength) { $prefixLength = 24 }
+    $prefixLength = [int]$prefixLength  # Ensure it's an integer
     $gateway = $staticIpConfig.gateway
     $dnsServers = $staticIpConfig.dns | Where-Object { $_ -and $_ -ne "" }
 
     if ($address -and $gateway) {
+        Write-Status "Network config: $address/$prefixLength gateway $gateway" "Info"
         Write-Status "Configuring static IP on '$adapter'..." "Info"
         try {
             # Get the network adapter
