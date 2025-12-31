@@ -31,22 +31,40 @@ foreach ($platform in $platforms) {
     }
 }
 
-# Battle.net requires install location (winget prompts otherwise)
+# Battle.net - try winget first, fallback to direct download
 if (Get-ConfigValue "install_battle_net" $false) {
-    $battleNetLocation = Get-ConfigValue "battle_net_location" "$env:ProgramFiles\Battle.net"
-    if ($Script:DryRun) {
-        Write-Status "[DRY RUN] Would install Battle.net to: $battleNetLocation" "Info"
+    # Check if already installed
+    $battleNetInstalled = Test-Path "$env:ProgramFiles(x86)\Battle.net\Battle.net.exe"
+    if (-not $battleNetInstalled) {
+        $battleNetInstalled = Test-Path "$env:ProgramFiles\Battle.net\Battle.net.exe"
+    }
+
+    if ($battleNetInstalled) {
+        Write-Status "Battle.net already installed" "Success"
     } else {
-        Write-Status "Installing Battle.net..." "Info"
-        try {
-            winget install --id "Blizzard.BattleNet" --location "$battleNetLocation" --accept-source-agreements --accept-package-agreements --silent 2>&1 | Out-Null
-            if ($LASTEXITCODE -eq 0) {
-                Write-Status "Battle.net installed" "Success"
-            } else {
-                Write-Status "Battle.net may need manual installation" "Warning"
+        $battleNetLocation = Get-ConfigValue "battle_net_location" "$env:ProgramFiles(x86)\Battle.net"
+
+        if ($Script:DryRun) {
+            Write-Status "[DRY RUN] Would install Battle.net" "Info"
+        } else {
+            Write-Status "Installing Battle.net..." "Info"
+            $wingetSuccess = $false
+
+            # Try winget first with location parameter
+            try {
+                $result = winget install --id "Blizzard.BattleNet" --location "$battleNetLocation" --accept-source-agreements --accept-package-agreements --silent 2>&1
+                if ($LASTEXITCODE -eq 0) {
+                    Write-Status "Battle.net installed (winget)" "Success"
+                    $wingetSuccess = $true
+                }
+            } catch { }
+
+            # Fallback to direct download if winget failed
+            if (-not $wingetSuccess) {
+                Write-Status "Winget failed, trying direct download..." "Warning"
+                $battleNetUrl = "https://www.battle.net/download/getInstallerForGame?os=win&gameProgram=BATTLENET_APP&version=live"
+                Install-DirectDownload -Name "Battle.net" -Url $battleNetUrl -InstallerArgs "--lang=enUS --installpath=`"$battleNetLocation`""
             }
-        } catch {
-            Write-Status "Battle.net installation failed: $_" "Warning"
         }
     }
 }

@@ -417,6 +417,104 @@ function Install-WingetPackage {
     return $false
 }
 
+function Install-DirectDownload {
+    <#
+    .SYNOPSIS
+        Downloads and runs an installer directly from a URL.
+        Use as fallback when winget fails.
+    .PARAMETER Name
+        Display name of the application
+    .PARAMETER Url
+        Direct download URL for the installer
+    .PARAMETER InstallerArgs
+        Arguments to pass to the installer (default: /S for silent)
+    .PARAMETER InstallerType
+        Type of installer: "exe", "msi", or "auto" (default: auto-detect from URL)
+    .PARAMETER PostInstall
+        ScriptBlock to run after successful installation
+    #>
+    param(
+        [string]$Name,
+        [string]$Url,
+        [string]$InstallerArgs = "/S",
+        [string]$InstallerType = "auto",
+        [scriptblock]$PostInstall = $null
+    )
+
+    if ($Script:DryRun) {
+        Write-Status "[DRY RUN] Would download and install: $Name" "Info"
+        Write-Host "    URL: $Url" -ForegroundColor Gray
+        return $true
+    }
+
+    Write-Status "Downloading $Name..." "Info"
+    Write-Host "    URL: $Url" -ForegroundColor Gray
+
+    # Determine file extension
+    $extension = ".exe"
+    if ($InstallerType -eq "msi") {
+        $extension = ".msi"
+    } elseif ($InstallerType -eq "auto" -and $Url -match "\.msi(\?|$)") {
+        $extension = ".msi"
+    }
+
+    $tempFile = Join-Path $env:TEMP "$($Name -replace '[^a-zA-Z0-9]', '_')_Setup$extension"
+
+    try {
+        # Download with progress
+        $ProgressPreference = 'SilentlyContinue'
+        Invoke-WebRequest -Uri $Url -OutFile $tempFile -UseBasicParsing -ErrorAction Stop
+        $ProgressPreference = 'Continue'
+
+        if (-not (Test-Path $tempFile)) {
+            throw "Download failed - file not created"
+        }
+
+        $fileSize = (Get-Item $tempFile).Length / 1MB
+        Write-Host "    Downloaded: $([math]::Round($fileSize, 1)) MB" -ForegroundColor Gray
+
+        Write-Status "Installing $Name..." "Info"
+
+        # Run installer based on type
+        if ($extension -eq ".msi") {
+            $process = Start-Process -FilePath "msiexec.exe" -ArgumentList "/i `"$tempFile`" /qn /norestart" -Wait -PassThru -ErrorAction Stop
+        } else {
+            # Handle different installer argument formats
+            if ($InstallerArgs) {
+                $process = Start-Process -FilePath $tempFile -ArgumentList $InstallerArgs -Wait -PassThru -ErrorAction Stop
+            } else {
+                $process = Start-Process -FilePath $tempFile -Wait -PassThru -ErrorAction Stop
+            }
+        }
+
+        if ($process.ExitCode -eq 0 -or $process.ExitCode -eq 3010) {
+            Write-Status "$Name installed successfully" "Success"
+
+            # Run post-install script if provided
+            if ($PostInstall) {
+                try {
+                    & $PostInstall
+                } catch {
+                    Write-Status "Post-install script warning: $_" "Warning"
+                }
+            }
+
+            return $true
+        } else {
+            Write-Status "$Name installer exited with code: $($process.ExitCode)" "Warning"
+            return $false
+        }
+    } catch {
+        Write-Status "Failed to download/install $Name : $_" "Error"
+        return $false
+    } finally {
+        # Cleanup
+        if (Test-Path $tempFile) {
+            Remove-Item $tempFile -Force -ErrorAction SilentlyContinue
+        }
+    }
+}
+
 # ============================================================================
 # MAIN EXECUTION
 # ============================================================================

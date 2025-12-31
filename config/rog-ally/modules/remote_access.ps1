@@ -23,8 +23,29 @@ if (Get-ConfigValue "install_tailscale" $false) {
 # Remote Desktop
 # --------------
 
+# AnyDesk - winget often fails, use direct download fallback
 if (Get-ConfigValue "install_anydesk" $false) {
-    Install-WingetPackage -PackageId "AnyDeskSoftwareGmbH.AnyDesk" -Name "AnyDesk"
+    # Check if already installed
+    $anydeskInstalled = Test-Path "$env:ProgramFiles(x86)\AnyDesk\AnyDesk.exe"
+    if (-not $anydeskInstalled) {
+        $anydeskInstalled = Test-Path "$env:ProgramFiles\AnyDesk\AnyDesk.exe"
+    }
+    if (-not $anydeskInstalled) {
+        $anydeskInstalled = Test-Path "$env:APPDATA\AnyDesk\AnyDesk.exe"
+    }
+
+    if ($anydeskInstalled) {
+        Write-Status "AnyDesk already installed" "Success"
+    } else {
+        # Try winget first
+        $wingetSuccess = Install-WingetPackage -PackageId "AnyDeskSoftwareGmbH.AnyDesk" -Name "AnyDesk"
+
+        # Fallback to direct download if winget failed
+        if (-not $wingetSuccess -and -not $Script:DryRun) {
+            Write-Status "Winget failed, trying direct download..." "Warning"
+            Install-DirectDownload -Name "AnyDesk" -Url "https://download.anydesk.com/AnyDesk.exe" -InstallerArgs "--install `"$env:ProgramFiles\AnyDesk`" --silent"
+        }
+    }
 }
 
 if (Get-ConfigValue "install_rustdesk" $false) {

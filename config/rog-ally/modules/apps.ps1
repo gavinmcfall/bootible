@@ -51,14 +51,30 @@ foreach ($app in $commApps) {
 # MEDIA
 # =============================================================================
 
-$mediaApps = @(
-    @{ Id = "Spotify.Spotify"; Name = "Spotify"; Config = "install_spotify" },
-    @{ Id = "VideoLAN.VLC"; Name = "VLC"; Config = "install_vlc" }
-)
+# VLC - standard winget install
+if (Get-ConfigValue "install_vlc" $false) {
+    Install-WingetPackage -PackageId "VideoLAN.VLC" -Name "VLC"
+}
 
-foreach ($app in $mediaApps) {
-    if (Get-ConfigValue $app.Config $false) {
-        Install-WingetPackage -PackageId $app.Id -Name $app.Name
+# Spotify - winget often fails, use direct download fallback
+if (Get-ConfigValue "install_spotify" $false) {
+    # Check if already installed
+    $spotifyInstalled = Test-Path "$env:APPDATA\Spotify\Spotify.exe"
+    if (-not $spotifyInstalled) {
+        $spotifyInstalled = Test-Path "$env:LocalAppData\Microsoft\WindowsApps\Spotify.exe"
+    }
+
+    if ($spotifyInstalled) {
+        Write-Status "Spotify already installed" "Success"
+    } else {
+        # Try winget first
+        $wingetSuccess = Install-WingetPackage -PackageId "Spotify.Spotify" -Name "Spotify"
+
+        # Fallback to direct download if winget failed
+        if (-not $wingetSuccess -and -not $Script:DryRun) {
+            Write-Status "Winget failed, trying direct download..." "Warning"
+            Install-DirectDownload -Name "Spotify" -Url "https://download.scdn.co/SpotifySetup.exe" -InstallerArgs "/silent"
+        }
     }
 }
 
