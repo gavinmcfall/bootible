@@ -161,6 +161,36 @@ if ($pkgManagers.scoop -eq $true) {
     }
 }
 
+# Optimize winget settings (use wininet for faster downloads)
+if (Get-ConfigValue "optimize_winget" $true) {
+    $wingetSettingsPath = Join-Path $env:LOCALAPPDATA "Packages\Microsoft.DesktopAppInstaller_8wekyb3d8bbwe\LocalState\settings.json"
+    $wingetSettingsDir = Split-Path $wingetSettingsPath -Parent
+
+    if (Test-Path $wingetSettingsDir) {
+        if ($Script:DryRun) {
+            Write-Status "[DRY RUN] Would optimize winget settings (wininet downloader)" "Info"
+        } else {
+            try {
+                $settings = @{}
+                if (Test-Path $wingetSettingsPath) {
+                    $settings = Get-Content $wingetSettingsPath -Raw | ConvertFrom-Json -AsHashtable
+                }
+
+                # Set network downloader to wininet (bypasses slow Delivery Optimization)
+                if (-not $settings.ContainsKey("network")) {
+                    $settings["network"] = @{}
+                }
+                $settings["network"]["downloader"] = "wininet"
+
+                $settings | ConvertTo-Json -Depth 10 | Set-Content $wingetSettingsPath -Force
+                Write-Status "Winget optimized (using wininet downloader)" "Success"
+            } catch {
+                Write-Status "Could not optimize winget: $_" "Warning"
+            }
+        }
+    }
+}
+
 # Update winget source (don't reset - it can delete the source on some systems)
 Write-Status "Updating winget source..." "Info"
 try {
