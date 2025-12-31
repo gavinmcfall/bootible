@@ -829,7 +829,8 @@ function Main {
     # Start transcript - save to private logs if available, otherwise temp
     $privatePath = Join-Path $BootibleDir "private"
     $suffix = if ($DryRun) { "_dryrun" } else { "_run" }
-    $logFileName = "$(Get-Date -Format 'yyyy-MM-dd')$suffix.log"
+    $hostname = $env:COMPUTERNAME.ToLower()
+    $logFileName = "$(Get-Date -Format 'yyyy-MM-dd')_${hostname}$suffix.log"
 
     if (Test-Path $privatePath) {
         $logsPath = Join-Path $privatePath "logs\$Device"
