@@ -466,9 +466,9 @@ Write-Status "YAML parser ready" "Success"
 
 # Load configuration
 # Always start with defaults, then merge overlays on top
-# Priority: -ConfigFile > private repo > local ~/.config > defaults
+# Priority: -ConfigFile > private repo selection > local ~/.config > defaults
 $defaultConfig = Join-Path $Script:DeviceRoot "config.yml"
-$privateConfig = Join-Path $Script:BootibleRoot "private\rog-ally\config.yml"
+$privateConfigDir = Join-Path $Script:BootibleRoot "private\rog-ally"
 $localConfig = Join-Path $env:USERPROFILE ".config\bootible\rog-ally\config.yml"
 
 # Always load defaults first
@@ -490,11 +490,52 @@ if ($ConfigFile -and (Test-Path $ConfigFile)) {
         Write-Status "Merged local config: $localConfig" "Info"
     }
 
-    # Merge private repo config if exists (takes priority over local)
-    if (Test-Path $privateConfig) {
-        $privateSettings = Import-YamlConfig $privateConfig
-        $Script:Config = Merge-Configs $Script:Config $privateSettings
-        Write-Status "Merged private config overrides" "Info"
+    # Check for private config files and let user select if multiple
+    if (Test-Path $privateConfigDir) {
+        $configFiles = Get-ChildItem -Path $privateConfigDir -Filter "config*.yml" -File -ErrorAction SilentlyContinue | Sort-Object Name
+
+        if ($configFiles -and $configFiles.Count -gt 0) {
+            $selectedConfig = $null
+
+            if ($configFiles.Count -eq 1) {
+                # Single config - use it automatically
+                $selectedConfig = $configFiles[0].FullName
+                Write-Status "Using config: $($configFiles[0].Name)" "Info"
+            } else {
+                # Multiple configs - let user choose
+                Write-Host ""
+                Write-Host "Multiple configurations found:" -ForegroundColor Cyan
+                Write-Host ""
+                for ($i = 0; $i -lt $configFiles.Count; $i++) {
+                    $num = $i + 1
+                    Write-Host "  " -NoNewline
+                    Write-Host "$num" -ForegroundColor Yellow -NoNewline
+                    Write-Host ") $($configFiles[$i].Name)"
+                }
+                Write-Host ""
+
+                while (-not $selectedConfig) {
+                    $selection = Read-Host "Select configuration [1-$($configFiles.Count)]"
+                    if ($selection -match '^\d+$') {
+                        $idx = [int]$selection - 1
+                        if ($idx -ge 0 -and $idx -lt $configFiles.Count) {
+                            $selectedConfig = $configFiles[$idx].FullName
+                            Write-Host ""
+                            Write-Status "Selected: $($configFiles[$idx].Name)" "Success"
+                        }
+                    }
+                    if (-not $selectedConfig) {
+                        Write-Host "Invalid selection. Please enter a number between 1 and $($configFiles.Count)" -ForegroundColor Red
+                    }
+                }
+            }
+
+            if ($selectedConfig) {
+                $privateSettings = Import-YamlConfig $selectedConfig
+                $Script:Config = Merge-Configs $Script:Config $privateSettings
+                Write-Status "Merged config: $(Split-Path $selectedConfig -Leaf)" "Info"
+            }
+        }
     }
 }
 
