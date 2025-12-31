@@ -431,4 +431,43 @@ if ($lockscreenPath) {
     }
 }
 
+# =============================================================================
+# DESKTOP CLEANUP
+# =============================================================================
+
+# Remove all desktop shortcuts (except Recycle Bin which isn't a shortcut)
+if (Get-ConfigValue "clean_desktop_shortcuts" $true) {
+    Write-Status "Cleaning desktop shortcuts..." "Info"
+
+    $userDesktop = [Environment]::GetFolderPath('Desktop')
+    $publicDesktop = "$env:PUBLIC\Desktop"
+
+    if ($Script:DryRun) {
+        $userShortcuts = Get-ChildItem -Path $userDesktop -Filter "*.lnk" -ErrorAction SilentlyContinue
+        $publicShortcuts = Get-ChildItem -Path $publicDesktop -Filter "*.lnk" -ErrorAction SilentlyContinue
+        $totalCount = ($userShortcuts.Count + $publicShortcuts.Count)
+        Write-Status "[DRY RUN] Would remove $totalCount desktop shortcuts" "Info"
+    } else {
+        $removed = 0
+
+        # Clean user desktop
+        Get-ChildItem -Path $userDesktop -Filter "*.lnk" -ErrorAction SilentlyContinue | ForEach-Object {
+            Remove-Item $_.FullName -Force -ErrorAction SilentlyContinue
+            $removed++
+        }
+
+        # Clean public desktop (shared shortcuts)
+        Get-ChildItem -Path $publicDesktop -Filter "*.lnk" -ErrorAction SilentlyContinue | ForEach-Object {
+            Remove-Item $_.FullName -Force -ErrorAction SilentlyContinue
+            $removed++
+        }
+
+        if ($removed -gt 0) {
+            Write-Status "Removed $removed desktop shortcuts" "Success"
+        } else {
+            Write-Status "No desktop shortcuts to remove" "Info"
+        }
+    }
+}
+
 Write-Status "Debloat module complete" "Success"
