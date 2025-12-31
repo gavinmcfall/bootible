@@ -438,8 +438,10 @@ if ($lockscreenPath) {
                 Set-RegistryValue -Path "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Lock Screen\Creative" -Name "LandscapeAssetPath" -Value $localLockscreen -Type "String"
                 Set-RegistryValue -Path "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Lock Screen\Creative" -Name "HotspotImageFolderPath" -Value $localLockscreen -Type "String"
 
+                # Force Windows to refresh the lock screen settings
+                RUNDLL32.EXE user32.dll,UpdatePerUserSystemParameters 1, True 2>$null
+
                 Write-Status "Lock screen set: $(Split-Path $lockscreenPath -Leaf)" "Success"
-                Write-Status "Note: May require sign-out/restart to take effect" "Info"
             } catch {
                 Write-Status "Failed to set lock screen: $_" "Warning"
             }
