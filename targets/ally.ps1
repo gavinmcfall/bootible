@@ -955,7 +955,8 @@ function Main {
             $logType = if ($DryRun) { "Dry run" } else { "Run" }
             Write-Host "[OK] $logType log saved: $logFileName" -ForegroundColor Green
 
-            # Push to git
+            # Push to git (refresh PATH first in case git was just installed)
+            $env:Path = [System.Environment]::GetEnvironmentVariable("Path", "Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path", "User")
             $gitExe = Get-Command git -ErrorAction SilentlyContinue
             if ($gitExe) {
                 Push-Location $privatePath
