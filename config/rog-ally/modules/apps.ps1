@@ -64,8 +64,16 @@ if (Get-ConfigValue "install_vlc" $false) {
         Write-Status "[DRY RUN] Would install VLC from Microsoft Store" "Info"
     } else {
         Write-Status "Installing VLC from Microsoft Store..." "Info"
-        $result = winget install XPDM1ZW6815MQM --source msstore --accept-source-agreements --accept-package-agreements --silent 2>&1
-        if ($LASTEXITCODE -eq 0) {
+        $prevEAP = $ErrorActionPreference
+        $ErrorActionPreference = "Continue"
+        try {
+            winget install XPDM1ZW6815MQM --source msstore --accept-source-agreements --accept-package-agreements --silent 2>&1 | Out-Null
+            $exitCode = $LASTEXITCODE
+        } finally {
+            $ErrorActionPreference = $prevEAP
+        }
+
+        if ($exitCode -eq 0) {
             Write-Status "VLC installed" "Success"
         } else {
             # Fallback to winget
