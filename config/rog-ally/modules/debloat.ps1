@@ -121,17 +121,50 @@ if (Get-ConfigValue "disable_lockscreen_junk" $true) {
     Set-RegistryValue -Path "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\ContentDeliveryManager" -Name "SubscribedContent-310091Enabled" -Value 0
 
     # Disable Lock Screen Widgets (Weather, News, etc.)
-    Set-RegistryValue -Path "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Notifications\Settings\Windows.LockScreen.MediaWidget" -Name "Enabled" -Value 0
+    # Policy-based settings (work when elevated)
     Set-RegistryValue -Path "HKLM:\SOFTWARE\Policies\Microsoft\Dsh" -Name "AllowNewsAndInterests" -Value 0
-    Set-RegistryValue -Path "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Feeds" -Name "ShellFeedsTaskbarViewMode" -Value 2
-    # Note: TaskbarDa blocked by UCPD in regular PowerShell - Dsh policy above handles it
-
-    # Disable Widgets completely (Windows 11)
     Set-RegistryValue -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows\Windows Feeds" -Name "EnableFeeds" -Value 0
-    Set-RegistryValue -Path "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Advanced" -Name "TaskbarMn" -Value 0
-
-    # Disable lock screen status/widgets via policy
     Set-RegistryValue -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows\System" -Name "DisableLockScreenAppNotifications" -Value 1
+
+    # HKCU settings blocked by UCPD when running elevated - use scheduled task
+    # These keys require non-elevated context to modify
+    $ucpdKeys = @(
+        @{ Path = "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Feeds"; Name = "ShellFeedsTaskbarViewMode"; Value = 2 },
+        @{ Path = "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Advanced"; Name = "TaskbarMn"; Value = 0 },
+        @{ Path = "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Notifications\Settings\Windows.LockScreen.MediaWidget"; Name = "Enabled"; Value = 0 }
+    )
+
+    if ($Script:DryRun) {
+        Write-Status "[DRY RUN] Would create scheduled task to apply UCPD-protected registry keys" "Info"
+    } else {
+        # Create a one-time scheduled task to apply HKCU settings at next logon (non-elevated)
+        $taskName = "Bootible-ApplyUserSettings"
+        $existingTask = Get-ScheduledTask -TaskName $taskName -ErrorAction SilentlyContinue
+
+        # Build the PowerShell command to set all UCPD-protected keys
+        $regCommands = $ucpdKeys | ForEach-Object {
+            "if (-not (Test-Path '$($_.Path)')) { New-Item -Path '$($_.Path)' -Force | Out-Null }; Set-ItemProperty -Path '$($_.Path)' -Name '$($_.Name)' -Value $($_.Value) -Force"
+        }
+        $allCommands = $regCommands -join "; "
+        # After applying, unregister the task itself
+        $allCommands += "; Unregister-ScheduledTask -TaskName '$taskName' -Confirm:`$false -ErrorAction SilentlyContinue"
+
+        $action = New-ScheduledTaskAction -Execute "powershell.exe" -Argument "-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -Command `"$allCommands`""
+        $trigger = New-ScheduledTaskTrigger -AtLogOn -User $env:USERNAME
+        $settings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -StartWhenAvailable
+        $principal = New-ScheduledTaskPrincipal -UserId $env:USERNAME -LogonType Interactive -RunLevel Limited
+
+        if ($existingTask) {
+            Unregister-ScheduledTask -TaskName $taskName -Confirm:$false -ErrorAction SilentlyContinue
+        }
+
+        try {
+            Register-ScheduledTask -TaskName $taskName -Action $action -Trigger $trigger -Settings $settings -Principal $principal -Force | Out-Null
+            Write-Status "Created scheduled task to apply widget settings at next logon" "Info"
+        } catch {
+            Write-Status "Could not create scheduled task for UCPD settings: $_" "Warning"
+        }
+    }
 
     Write-Status "Lock screen junk and widgets disabled" "Success"
 }
