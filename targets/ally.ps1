@@ -902,6 +902,35 @@ function Main {
     Setup-Private
     Write-Host ""
 
+    # Move transcript from TEMP to logs folder if it was started there
+    $privatePath = Join-Path $BootibleDir "private"
+    if ((Test-Path $privatePath) -and $Script:TranscriptFile -and ($Script:TranscriptFile -like "$env:TEMP*")) {
+        # Transcript is in TEMP, move it to logs folder
+        $logsPath = Join-Path $privatePath "logs\$Device"
+        if (-not (Test-Path $logsPath)) {
+            New-Item -ItemType Directory -Path $logsPath -Force | Out-Null
+        }
+
+        # Stop current transcript
+        try { Stop-Transcript | Out-Null } catch { }
+        Start-Sleep -Milliseconds 500
+
+        # Move file to logs folder (strip "bootible_" prefix)
+        $tempFileName = Split-Path -Leaf $Script:TranscriptFile
+        $logFileName = $tempFileName -replace '^bootible_', ''
+        $newTranscriptPath = Join-Path $logsPath $logFileName
+        if (Test-Path $Script:TranscriptFile) {
+            Move-Item -Path $Script:TranscriptFile -Destination $newTranscriptPath -Force
+            $Script:TranscriptFile = $newTranscriptPath
+            $env:BOOTIBLE_TRANSCRIPT = $newTranscriptPath
+
+            # Restart transcript appending to moved file
+            try {
+                Start-Transcript -Path $Script:TranscriptFile -Append -Force | Out-Null
+            } catch { }
+        }
+    }
+
     Select-Config
     Write-Host ""
 
