@@ -830,7 +830,7 @@ function Main {
     $privatePath = Join-Path $BootibleDir "private"
     $suffix = if ($DryRun) { "_dryrun" } else { "_run" }
     $hostname = $env:COMPUTERNAME.ToLower()
-    $logFileName = "$(Get-Date -Format 'yyyy-MM-dd')_${hostname}$suffix.log"
+    $logFileName = "$(Get-Date -Format 'yyyy-MM-dd_HHmmss')_${hostname}$suffix.log"
 
     if (Test-Path $privatePath) {
         $logsPath = Join-Path $privatePath "logs\$Device"

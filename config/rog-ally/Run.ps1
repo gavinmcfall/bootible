@@ -49,7 +49,8 @@ if ($env:BOOTIBLE_TRANSCRIPT -and (Test-Path $env:BOOTIBLE_TRANSCRIPT)) {
     $Script:TranscriptInherited = $false
     $privatePath = Join-Path (Split-Path -Parent (Split-Path -Parent $PSScriptRoot)) "private"
     $suffix = if ($DryRun) { "_dryrun" } else { "_run" }
-    $logFileName = "$(Get-Date -Format 'yyyy-MM-dd')$suffix.log"
+    $hostname = $env:COMPUTERNAME.ToLower()
+    $logFileName = "$(Get-Date -Format 'yyyy-MM-dd_HHmmss')_${hostname}$suffix.log"
 
     if (Test-Path $privatePath) {
         $logsPath = Join-Path $privatePath "logs\rog-ally"
