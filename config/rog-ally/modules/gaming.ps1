@@ -34,7 +34,7 @@ foreach ($platform in $platforms) {
 # Battle.net - installer doesn't exit cleanly, needs special handling
 if (Get-ConfigValue "install_battle_net" $false) {
     # Check if already installed
-    $battleNetInstalled = Test-Path "$env:ProgramFiles(x86)\Battle.net\Battle.net.exe"
+    $battleNetInstalled = Test-Path "${env:ProgramFiles(x86)}\Battle.net\Battle.net.exe"
     if (-not $battleNetInstalled) {
         $battleNetInstalled = Test-Path "$env:ProgramFiles\Battle.net\Battle.net.exe"
     }
@@ -45,7 +45,7 @@ if (Get-ConfigValue "install_battle_net" $false) {
         Write-Status "[DRY RUN] Would install Battle.net" "Info"
     } else {
         Write-Status "Installing Battle.net..." "Info"
-        $battleNetLocation = Get-ConfigValue "battle_net_location" "$env:ProgramFiles(x86)\Battle.net"
+        $battleNetLocation = Get-ConfigValue "battle_net_location" "${env:ProgramFiles(x86)}\Battle.net"
 
         try {
             # Download installer
@@ -73,7 +73,7 @@ if (Get-ConfigValue "install_battle_net" $false) {
                     $waited += 5
 
                     if ((Test-Path "$battleNetLocation\Battle.net.exe") -or
-                        (Test-Path "$env:ProgramFiles(x86)\Battle.net\Battle.net.exe") -or
+                        (Test-Path "${env:ProgramFiles(x86)}\Battle.net\Battle.net.exe") -or
                         (Test-Path "$env:ProgramFiles\Battle.net\Battle.net.exe")) {
                         $installed = $true
                         break
