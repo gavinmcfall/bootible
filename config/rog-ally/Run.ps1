@@ -703,6 +703,7 @@ if (Get-ConfigValue "create_restore_point" $true) {
 $modulesPath = Join-Path $Script:DeviceRoot "modules"
 
 $moduleOrder = @(
+    "validate",       # Validate package sources first (dry run only)
     "base",
     "apps",           # Install apps first so debloat can configure them
     "gaming",
