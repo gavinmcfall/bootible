@@ -320,7 +320,7 @@ function Install-WingetPackage {
         [string]$PackageId,
         [string]$Name,
         [switch]$Force,
-        [int]$TimeoutSeconds = 120  # 2 minute timeout per source
+        [int]$TimeoutSeconds = 300  # 5 minute timeout per source (larger packages like VLC need more time)
     )
 
     # Check if already installed first (even in DryRun)
