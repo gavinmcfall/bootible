@@ -67,7 +67,7 @@ if (Get-ConfigValue "install_vlc" $false) {
         # If winget failed, use direct download
         if (-not $wingetSuccess) {
             Write-Status "Winget failed, trying direct download..." "Info"
-            Install-DirectDownload -Name "VLC" -Url "https://get.videolan.org/vlc/3.0.21/win64/vlc-3.0.21-win64.exe" -InstallerArgs "/S"
+            Install-DirectDownload -Name "VLC" -Url "https://download.videolan.org/pub/videolan/vlc/3.0.21/win64/vlc-3.0.21-win64.exe" -InstallerArgs "/S"
         }
     }
 }
