@@ -97,22 +97,43 @@ if (Get-ConfigValue "install_msi_afterburner" $false) {
     if (Test-Path $afterburnerPath) {
         Write-Status "MSI Afterburner already installed - skipping" "Success"
     } elseif ($Script:DryRun) {
-        Write-Status "[DRY RUN] Would install MSI Afterburner" "Info"
+        Write-Status "[DRY RUN] Would install MSI Afterburner via direct download" "Info"
     } else {
-        # Winget hangs on this installer - use Chocolatey if available
-        $choco = Get-Command choco -ErrorAction SilentlyContinue
-        if ($choco) {
-            Write-Status "Installing MSI Afterburner via Chocolatey..." "Info"
-            choco install msiafterburner -y 2>&1 | Out-Null
-            if ($LASTEXITCODE -eq 0) {
-                Write-Status "MSI Afterburner installed" "Success"
+        # Direct download (Chocolatey/winget unreliable for this package)
+        Write-Status "Downloading MSI Afterburner..." "Info"
+        $zipUrl = "https://download.msi.com/uti_exe/vga/MSIAfterburnerSetup.zip"
+        $zipFile = Join-Path $env:TEMP "MSIAfterburnerSetup.zip"
+        $extractPath = Join-Path $env:TEMP "MSIAfterburner"
+
+        try {
+            $ProgressPreference = 'SilentlyContinue'
+            Invoke-WebRequest -Uri $zipUrl -OutFile $zipFile -UseBasicParsing -ErrorAction Stop
+            $ProgressPreference = 'Continue'
+
+            # Extract ZIP
+            if (Test-Path $extractPath) { Remove-Item $extractPath -Recurse -Force }
+            Expand-Archive -Path $zipFile -DestinationPath $extractPath -Force
+
+            # Find and run the installer
+            $installer = Get-ChildItem -Path $extractPath -Filter "*.exe" -Recurse | Select-Object -First 1
+            if ($installer) {
+                Write-Status "Installing MSI Afterburner..." "Info"
+                Start-Process -FilePath $installer.FullName -ArgumentList "/S" -Wait -NoNewWindow
+                if (Test-Path $afterburnerPath) {
+                    Write-Status "MSI Afterburner installed" "Success"
+                } else {
+                    Write-Status "Installer completed - verify installation" "Info"
+                }
             } else {
-                Write-Status "Chocolatey install failed - download manually" "Warning"
-                Write-Status "https://www.msi.com/Landing/afterburner/graphics-cards" "Info"
+                Write-Status "Could not find installer in ZIP" "Warning"
             }
-        } else {
-            Write-Status "MSI Afterburner requires Chocolatey or manual install" "Warning"
-            Write-Status "https://www.msi.com/Landing/afterburner/graphics-cards" "Info"
+
+            # Cleanup
+            Remove-Item $zipFile -Force -ErrorAction SilentlyContinue
+            Remove-Item $extractPath -Recurse -Force -ErrorAction SilentlyContinue
+        } catch {
+            Write-Status "Failed to download MSI Afterburner: $_" "Warning"
+            Write-Status "Download manually: https://www.msi.com/Landing/afterburner/graphics-cards" "Info"
         }
     }
     Write-Status "MSI Afterburner: GPU monitoring and overclocking" "Info"
