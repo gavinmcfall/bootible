@@ -40,76 +40,10 @@ mkdir -p "$PRIVATE_PATH/steamdeck/scripts"
 mkdir -p "$PRIVATE_PATH/logs/rog-ally"
 mkdir -p "$PRIVATE_PATH/logs/steamdeck"
 
-# Create ROG Ally example config
-cat > "$PRIVATE_PATH/rog-ally/config.yml" << 'EOF'
-# My ROG Ally X Configuration
-# ============================
-# This file overrides defaults from config/rog-ally/config.yml
-# Only include settings you want to change.
-
----
-# Uncomment and modify the settings you want to override:
-
-# Apps
-# install_discord: true
-# install_spotify: true
-
-# Password manager: "1password", "bitwarden", "keepassxc", or "none"
-# password_manager: "1password"
-
-# Gaming platforms
-# install_steam: true
-# install_gog_galaxy: true
-
-# Streaming
-# install_moonlight: true
-# install_chiaki: true
-
-# Emulation
-# install_emulation: true
-# install_emudeck: true
-
-# Paths (change if you have a D: drive or SD card)
-# games_path: "D:\\Games"
-# roms_path: "D:\\Emulation\\ROMs"
-# bios_path: "D:\\Emulation\\BIOS"
-EOF
-
-# Create Steam Deck example config
-cat > "$PRIVATE_PATH/steamdeck/config.yml" << 'EOF'
-# My Steam Deck Configuration
-# ============================
-# This file overrides defaults from config/steamdeck/config.yml
-# Only include settings you want to change.
-
----
-# Uncomment and modify the settings you want to override:
-
-# Apps
-# install_discord: true
-# install_spotify: true
-
-# Password manager: "1password", "bitwarden", "keepassxc", or "none"
-# password_manager: "1password"
-# password_manager_install_method: "distrobox"
-
-# Streaming
-# install_moonlight: true
-# install_chiaki: true
-# install_greenlight: true
-
-# Remote access
-# install_ssh: true
-# install_tailscale: true
-# install_sunshine: true
-
-# Emulation
-# install_emudeck: true
-
-# Gaming
-# install_decky: true
-# install_proton_tools: true
-EOF
+# Copy default config files
+# Users can see all available options and modify as needed
+cp "$SCRIPT_DIR/config/rog-ally/config.yml" "$PRIVATE_PATH/rog-ally/config.yml"
+cp "$SCRIPT_DIR/config/steamdeck/config.yml" "$PRIVATE_PATH/steamdeck/config.yml"
 
 # Create README
 cat > "$PRIVATE_PATH/README.md" << 'EOF'
