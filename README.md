@@ -263,6 +263,16 @@ cd ~/bootible && git pull && ./targets/deck.sh
 
 ---
 
+## Troubleshooting
+
+See [TROUBLESHOOTING.md](TROUBLESHOOTING.md) for common issues:
+
+- **ROG Ally:** winget source problems, package failures, GitHub auth
+- **Steam Deck:** read-only filesystem, Decky rate limits, SD card setup
+- **Both:** debug mode, log locations, re-run instructions
+
+---
+
 ## Post-Setup (ROG Ally)
 
 Some settings require manual configuration via Armoury Crate:
