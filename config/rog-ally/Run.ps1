@@ -79,6 +79,84 @@ $Script:DeviceRoot = $PSScriptRoot
 $Script:PrivateRoot = Join-Path $Script:BootibleRoot "private"
 $Script:Config = @{}
 
+# Installation result tracking
+# Tracks attempted/succeeded/failed/skipped counts and per-package details
+$Script:InstallResults = @{
+    Attempted = 0
+    Succeeded = 0
+    Failed    = 0
+    Skipped   = 0
+    Packages  = @()
+}
+
+function Add-InstallResult {
+    <#
+    .SYNOPSIS
+        Records the result of a package installation attempt.
+    .PARAMETER PackageId
+        The winget package ID (e.g., "Microsoft.PowerShell")
+    .PARAMETER Name
+        Display name of the package
+    .PARAMETER Status
+        Result status: "succeeded", "failed", or "skipped"
+    .PARAMETER Source
+        Installation source used (e.g., "winget", "msstore", "direct")
+    .PARAMETER Message
+        Optional message with additional details
+    #>
+    param(
+        [Parameter(Mandatory)]
+        [string]$PackageId,
+        [Parameter(Mandatory)]
+        [string]$Name,
+        [Parameter(Mandatory)]
+        [ValidateSet("succeeded", "failed", "skipped")]
+        [string]$Status,
+        [string]$Source = "",
+        [string]$Message = ""
+    )
+
+    $Script:InstallResults.Attempted++
+
+    switch ($Status) {
+        "succeeded" { $Script:InstallResults.Succeeded++ }
+        "failed"    { $Script:InstallResults.Failed++ }
+        "skipped"   { $Script:InstallResults.Skipped++ }
+    }
+
+    $Script:InstallResults.Packages += @{
+        PackageId = $PackageId
+        Name      = $Name
+        Status    = $Status
+        Source    = $Source
+        Message   = $Message
+        Timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
+    }
+}
+
+function Get-InstallResults {
+    <#
+    .SYNOPSIS
+        Returns the installation results summary and package details.
+    .PARAMETER SummaryOnly
+        If set, returns only the counts (Attempted/Succeeded/Failed/Skipped)
+    #>
+    param(
+        [switch]$SummaryOnly
+    )
+
+    if ($SummaryOnly) {
+        return @{
+            Attempted = $Script:InstallResults.Attempted
+            Succeeded = $Script:InstallResults.Succeeded
+            Failed    = $Script:InstallResults.Failed
+            Skipped   = $Script:InstallResults.Skipped
+        }
+    }
+
+    return $Script:InstallResults
+}
+
 # ============================================================================
 # HELPER FUNCTIONS
 # ============================================================================
@@ -316,6 +394,15 @@ function Import-YamlConfig {
 # Note: Convert-OrderedDictToHashtable and Merge-Configs are imported from lib/helpers.ps1
 
 function Install-WingetPackage {
+    <#
+    .SYNOPSIS
+        Installs a package via winget with fallback sources and result tracking.
+    .DESCRIPTION
+        Attempts installation from winget source first, falls back to msstore.
+        Records results via Add-InstallResult and returns a structured result object.
+    .OUTPUTS
+        Hashtable with: Success, Status, PackageId, Name, Source, Message
+    #>
     param(
         [string]$PackageId,
         [string]$Name,
@@ -323,13 +410,27 @@ function Install-WingetPackage {
         [int]$TimeoutSeconds = 300  # 5 minute timeout per source (larger packages like VLC need more time)
     )
 
+    # Helper to create result object
+    $createResult = {
+        param($Success, $Status, $Source, $Message)
+        @{
+            Success   = $Success
+            Status    = $Status
+            PackageId = $PackageId
+            Name      = $Name
+            Source    = $Source
+            Message   = $Message
+        }
+    }
+
     # Check if already installed first (even in DryRun)
     try {
         # Check both sources for existing installation
         $installed = winget list --id $PackageId --accept-source-agreements 2>$null
         if ($installed -match $PackageId) {
             Write-Status "$Name already installed - skipping" "Success"
-            return $true
+            Add-InstallResult -PackageId $PackageId -Name $Name -Status "skipped" -Message "Already installed"
+            return (& $createResult $true "skipped" "" "Already installed")
         }
     } catch {
         # winget list failed, continue with install attempt
@@ -367,15 +468,15 @@ function Install-WingetPackage {
         if ($foundInWinget) {
             Write-Host " OK (winget)" -ForegroundColor Green
             Write-Status "[DRY RUN] Would install: $Name ($PackageId) from winget" "Info"
-            return $true
+            return (& $createResult $true "dryrun" "winget" "Validated in winget")
         } elseif ($foundInMsStore) {
             Write-Host " OK (msstore)" -ForegroundColor Yellow
             Write-Status "[DRY RUN] Would install: $Name ($PackageId) from msstore (fallback)" "Info"
-            return $true
+            return (& $createResult $true "dryrun" "msstore" "Validated in msstore")
         } else {
             Write-Host " NOT FOUND" -ForegroundColor Red
             Write-Status "[DRY RUN] Package not found in any source: $PackageId" "Warning"
-            return $false
+            return (& $createResult $false "dryrun" "" "Package not found in any source")
         }
     }
 
@@ -416,7 +517,8 @@ function Install-WingetPackage {
             Write-Host "    Winget timed out after ${TimeoutSeconds}s" -ForegroundColor Yellow
         } elseif ($result.ExitCode -eq 0) {
             Write-Status "$Name installed (winget)" "Success"
-            return $true
+            Add-InstallResult -PackageId $PackageId -Name $Name -Status "succeeded" -Source "winget"
+            return (& $createResult $true "succeeded" "winget" "Installed successfully")
         } else {
             Write-Host "    Winget source failed (exit code $($result.ExitCode))" -ForegroundColor Yellow
         }
@@ -431,7 +533,8 @@ function Install-WingetPackage {
             Write-Host "    msstore timed out after ${TimeoutSeconds}s" -ForegroundColor Red
         } elseif ($result.ExitCode -eq 0) {
             Write-Status "$Name installed (msstore fallback)" "Success"
-            return $true
+            Add-InstallResult -PackageId $PackageId -Name $Name -Status "succeeded" -Source "msstore"
+            return (& $createResult $true "succeeded" "msstore" "Installed via fallback")
         } else {
             Write-Host "    msstore also failed (exit code $($result.ExitCode))" -ForegroundColor Red
         }
@@ -439,13 +542,18 @@ function Install-WingetPackage {
 
     # Both sources failed - show error details
     Write-Status "Failed to install $Name from all sources" "Warning"
+    $errorMsg = "All sources failed"
     if ($result.Output -and -not $result.TimedOut) {
         $errorLines = $result.Output | Where-Object { $_ -match "error|fail|not found|applicable" } | Select-Object -First 3
         foreach ($line in $errorLines) {
             Write-Host "    $line" -ForegroundColor Yellow
         }
+        $errorMsg = ($errorLines -join "; ")
+    } elseif ($result.TimedOut) {
+        $errorMsg = "Installation timed out"
     }
-    return $false
+    Add-InstallResult -PackageId $PackageId -Name $Name -Status "failed" -Message $errorMsg
+    return (& $createResult $false "failed" "" $errorMsg)
 }
 
 function Install-DirectDownload {
