@@ -79,6 +79,84 @@ $Script:DeviceRoot = $PSScriptRoot
 $Script:PrivateRoot = Join-Path $Script:BootibleRoot "private"
 $Script:Config = @{}
 
+# Installation result tracking
+# Tracks attempted/succeeded/failed/skipped counts and per-package details
+$Script:InstallResults = @{
+    Attempted = 0
+    Succeeded = 0
+    Failed    = 0
+    Skipped   = 0
+    Packages  = @()
+}
+
+function Add-InstallResult {
+    <#
+    .SYNOPSIS
+        Records the result of a package installation attempt.
+    .PARAMETER PackageId
+        The winget package ID (e.g., "Microsoft.PowerShell")
+    .PARAMETER Name
+        Display name of the package
+    .PARAMETER Status
+        Result status: "succeeded", "failed", or "skipped"
+    .PARAMETER Source
+        Installation source used (e.g., "winget", "msstore", "direct")
+    .PARAMETER Message
+        Optional message with additional details
+    #>
+    param(
+        [Parameter(Mandatory)]
+        [string]$PackageId,
+        [Parameter(Mandatory)]
+        [string]$Name,
+        [Parameter(Mandatory)]
+        [ValidateSet("succeeded", "failed", "skipped")]
+        [string]$Status,
+        [string]$Source = "",
+        [string]$Message = ""
+    )
+
+    $Script:InstallResults.Attempted++
+
+    switch ($Status) {
+        "succeeded" { $Script:InstallResults.Succeeded++ }
+        "failed"    { $Script:InstallResults.Failed++ }
+        "skipped"   { $Script:InstallResults.Skipped++ }
+    }
+
+    $Script:InstallResults.Packages += @{
+        PackageId = $PackageId
+        Name      = $Name
+        Status    = $Status
+        Source    = $Source
+        Message   = $Message
+        Timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
+    }
+}
+
+function Get-InstallResults {
+    <#
+    .SYNOPSIS
+        Returns the installation results summary and package details.
+    .PARAMETER SummaryOnly
+        If set, returns only the counts (Attempted/Succeeded/Failed/Skipped)
+    #>
+    param(
+        [switch]$SummaryOnly
+    )
+
+    if ($SummaryOnly) {
+        return @{
+            Attempted = $Script:InstallResults.Attempted
+            Succeeded = $Script:InstallResults.Succeeded
+            Failed    = $Script:InstallResults.Failed
+            Skipped   = $Script:InstallResults.Skipped
+        }
+    }
+
+    return $Script:InstallResults
+}
+
 # ============================================================================
 # HELPER FUNCTIONS
 # ============================================================================
