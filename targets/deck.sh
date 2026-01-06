@@ -691,6 +691,8 @@ setup_private() {
             local repo_slug
             repo_slug=$(echo "$PRIVATE_REPO" | sed 's|https://github.com/||' | sed 's|\.git$||' | sed 's|git@github.com:||')
             echo "    Repo slug: $repo_slug"
+            # Force HTTPS protocol (gh might default to SSH which fails without keys)
+            gh config set git_protocol https 2>/dev/null || true
             if gh repo clone "$repo_slug" "$PRIVATE_PATH"; then
                 echo -e "${GREEN}✓${NC} Private configuration linked"
                 return 0
