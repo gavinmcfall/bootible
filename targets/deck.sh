@@ -1023,20 +1023,11 @@ install_bootible_command() {
     local cmd_content="#!/bin/bash
 cd \"$BOOTIBLE_DIR\" && git pull && BOOTIBLE_RUN=1 ./targets/deck.sh \"\$@\""
 
-    local cmd_path="$HOME/.local/bin/bootible"
-    mkdir -p "$HOME/.local/bin"
+    # Install to /usr/local/bin (already in PATH, works immediately)
+    local cmd_path="/usr/local/bin/bootible"
 
-    echo "$cmd_content" > "$cmd_path"
-    chmod +x "$cmd_path"
-
-    # Ensure ~/.local/bin is in PATH
-    if [[ ":$PATH:" != *":$HOME/.local/bin:"* ]]; then
-        export PATH="$HOME/.local/bin:$PATH"
-        # shellcheck disable=SC2016  # Intentional: write literal $HOME, not expanded
-        if [[ -f "$HOME/.bashrc" ]] && ! grep -q '$HOME/.local/bin' "$HOME/.bashrc"; then
-            echo 'export PATH="$HOME/.local/bin:$PATH"' >> "$HOME/.bashrc"
-        fi
-    fi
+    echo "$cmd_content" | sudo tee "$cmd_path" > /dev/null
+    sudo chmod +x "$cmd_path"
 
     echo -e "${GREEN}✓${NC} Installed 'bootible' command"
 }
@@ -1095,9 +1086,7 @@ main() {
         echo ""
         echo "Review the output above. When ready to apply changes:"
         echo ""
-        echo -e "  ${GREEN}~/.local/bin/bootible${NC}"
-        echo ""
-        echo "After this first run, just use: ${GREEN}bootible${NC}"
+        echo -e "  ${GREEN}bootible${NC}"
     else
         echo -e "${GREEN}╔════════════════════════════════════════════════════════════╗${NC}"
         echo -e "${GREEN}║                   Setup Complete!                          ║${NC}"
