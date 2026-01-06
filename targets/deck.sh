@@ -599,12 +599,16 @@ needs_github_auth() {
 
 # Clone bootible
 clone_bootible() {
-    if [[ -d "$BOOTIBLE_DIR" ]]; then
+    if [[ -d "$BOOTIBLE_DIR/.git" ]]; then
         echo -e "${BLUE}→${NC} Updating existing bootible..."
         cd "$BOOTIBLE_DIR"
-        git pull
+        # Ensure we're on main and have latest code (force reset to avoid stale files)
+        git fetch origin main
+        git reset --hard origin/main
+        git clean -fd
     else
         echo -e "${BLUE}→${NC} Cloning bootible..."
+        rm -rf "$BOOTIBLE_DIR" 2>/dev/null || true
         git clone https://github.com/gavinmcfall/bootible.git "$BOOTIBLE_DIR"
         cd "$BOOTIBLE_DIR"
     fi
