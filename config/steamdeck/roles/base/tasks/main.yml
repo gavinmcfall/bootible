@@ -53,6 +53,19 @@
 # -----------------------
 # Configures a static IP via NetworkManager if specified
 
+# Check if the target network connection exists
+- name: Check if target network connection exists
+  ansible.builtin.command:
+    cmd: nmcli -t -f NAME con show
+  register: network_connections
+  changed_when: false
+  when: static_ip.enabled | default(false)
+
+- name: Set connection availability fact
+  ansible.builtin.set_fact:
+    target_connection_exists: "{{ static_ip.connection in (network_connections.stdout_lines | default([])) }}"
+  when: static_ip.enabled | default(false)
+
 - name: Configure static IP
   community.general.nmcli:
     conn_name: "{{ static_ip.connection }}"
@@ -69,6 +82,7 @@
     - static_ip.enabled | default(false)
     - static_ip.address | default('') | length > 0
     - static_ip.gateway | default('') | length > 0
+    - target_connection_exists | default(false)
 
 - name: Display static IP configuration
   ansible.builtin.debug:
@@ -79,6 +93,15 @@
         Gateway: {{ static_ip.gateway }}
         DNS: {{ static_ip.dns | default([]) | select() | join(', ') }}
   when: static_ip_config is defined and static_ip_config is changed
+
+- name: Display network unavailable notice
+  ansible.builtin.debug:
+    msg: |
+      Network '{{ static_ip.connection }}' not found - using DHCP.
+      Static IP will be configured when connected to '{{ static_ip.connection }}'.
+  when:
+    - static_ip.enabled | default(false)
+    - not (target_connection_exists | default(false))
 
 # Reset to DHCP if static IP is disabled
 - name: Reset to DHCP
@@ -95,6 +118,7 @@
   when:
     - not (static_ip.enabled | default(false))
     - static_ip.connection | default('') | length > 0
+    - static_ip.connection in (network_connections.stdout_lines | default([]))
 
 - name: Display DHCP configuration
   ansible.builtin.debug:
