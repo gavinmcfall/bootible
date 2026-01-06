@@ -5,7 +5,7 @@
 **CRITICAL**: The purpose of this project is to minimize typing on devices with on-screen keyboards (Steam Deck, ROG Ally).
 
 The user experience MUST be:
-1. One command to dry run: `curl -fsSL https://bootible.dev/deck | bash`
+1. One command to dry run (e.g., `curl -fsSL https://bootible.dev/deck | bash`)
 2. One command to apply: `bootible`
 
 **NO exceptions. NO extra steps:**
