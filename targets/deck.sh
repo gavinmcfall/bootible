@@ -708,44 +708,41 @@ setup_private() {
             echo "    gh CLI not available or not authenticated"
         fi
 
-        # Strategy 2: Try git with GIT_ASKPASS (secure token passing)
+        # Strategy 2: Try git with token (ignore global config to prevent SSH rewrite)
         local token
         token=$(gh auth token 2>/dev/null || true)
         if [[ -n "$token" ]]; then
-            echo "    Cloning with credential helper..."
-            local askpass_script="/tmp/git-askpass-$$.sh"
-            echo "#!/bin/bash" > "$askpass_script"
-            echo "echo '$token'" >> "$askpass_script"
-            chmod +x "$askpass_script"
-
-            # Set up secure git auth
-            export GIT_ASKPASS="$askpass_script"
+            echo "    Cloning with token..."
+            # Ignore global git config to prevent SSH URL rewriting
+            export GIT_CONFIG_GLOBAL=/dev/null
+            export GIT_CONFIG_SYSTEM=/dev/null
             export GIT_TERMINAL_PROMPT=0
 
-            if git clone "$PRIVATE_REPO" "$PRIVATE_PATH"; then
-                # Clean up immediately
-                rm -f "$askpass_script"
-                unset GIT_ASKPASS
-                unset GIT_TERMINAL_PROMPT
+            # Clone with token in URL (works even with restrictive git configs)
+            local auth_url
+            auth_url=$(echo "$PRIVATE_REPO" | sed "s|https://|https://${token}@|")
+            if git clone "$auth_url" "$PRIVATE_PATH"; then
+                unset GIT_CONFIG_GLOBAL GIT_CONFIG_SYSTEM GIT_TERMINAL_PROMPT
                 echo -e "${GREEN}✓${NC} Private configuration linked"
                 return 0
             fi
 
-            # Clean up on failure
-            rm -f "$askpass_script"
-            unset GIT_ASKPASS
-            unset GIT_TERMINAL_PROMPT
+            unset GIT_CONFIG_GLOBAL GIT_CONFIG_SYSTEM GIT_TERMINAL_PROMPT
             echo -e "${YELLOW}!${NC} Git clone with token failed"
         else
             echo "    No token available from gh auth"
         fi
 
-        # Strategy 3: Fall back to plain git (may prompt for password)
+        # Strategy 3: Fall back to plain git (ignore global config)
         echo "    Trying plain git clone..."
+        export GIT_CONFIG_GLOBAL=/dev/null
+        export GIT_CONFIG_SYSTEM=/dev/null
         if git clone "$PRIVATE_REPO" "$PRIVATE_PATH"; then
+            unset GIT_CONFIG_GLOBAL GIT_CONFIG_SYSTEM
             echo -e "${GREEN}✓${NC} Private configuration linked"
             return 0
         fi
+        unset GIT_CONFIG_GLOBAL GIT_CONFIG_SYSTEM
 
         echo -e "${YELLOW}!${NC} Failed to clone private repo"
         echo "  Continuing without private config..."
