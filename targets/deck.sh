@@ -173,8 +173,7 @@ push_log_to_git() {
         if push_output=$(git push 2>&1); then
             echo -e "${GREEN}✓${NC} Log pushed to private repo"
         else
-            echo -e "${YELLOW}!${NC} Push failed: $push_output"
-            echo -e "${YELLOW}!${NC} Commit saved locally - run 'cd $private_dir && git push' manually"
+            echo -e "${YELLOW}!${NC} Log saved locally (push requires repo write access)"
         fi
     else
         echo -e "${YELLOW}!${NC} Git commit failed: $commit_output"
