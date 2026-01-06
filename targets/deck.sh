@@ -1019,8 +1019,9 @@ run_playbook() {
 install_bootible_command() {
     echo -e "${BLUE}→${NC} Installing 'bootible' command..."
 
+    # bootible command defaults to real run (user already did dry run via curl)
     local cmd_content="#!/bin/bash
-cd \"$BOOTIBLE_DIR\" && git pull && ./targets/deck.sh \"\$@\""
+cd \"$BOOTIBLE_DIR\" && git pull && BOOTIBLE_RUN=1 ./targets/deck.sh \"\$@\""
 
     local cmd_path="$HOME/.local/bin/bootible"
     mkdir -p "$HOME/.local/bin"
