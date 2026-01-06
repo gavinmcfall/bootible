@@ -19,6 +19,20 @@
 
 set -e
 
+# Ensure logs are pushed even on failure
+cleanup_and_push_log() {
+    local exit_code=$?
+
+    # Only run cleanup if we've started (DEVICE is set)
+    if [[ -n "${DEVICE:-}" && -n "${BOOTIBLE_DIR:-}" ]]; then
+        # Try to push logs - don't let errors prevent exit
+        push_log_to_git || true
+    fi
+
+    exit $exit_code
+}
+trap cleanup_and_push_log EXIT
+
 # Colors
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -145,15 +159,25 @@ push_log_to_git() {
 
     # Commit and push
     echo -e "${BLUE}→${NC} Committing log: logs/$DEVICE/$log_filename"
-    if git commit -m "log: $DEVICE $run_type $(date '+%Y-%m-%d %H:%M')" 2>&1; then
+    local commit_output
+    if commit_output=$(git commit -m "log: $DEVICE $run_type $(date '+%Y-%m-%d %H:%M')" 2>&1); then
+        echo -e "${GREEN}✓${NC} Committed: $commit_output"
         echo -e "${BLUE}→${NC} Pushing to remote..."
-        if git push 2>&1; then
+
+        # Ensure gh credential helper is set up for push
+        if command -v gh &>/dev/null && gh auth status &>/dev/null 2>&1; then
+            gh auth setup-git 2>/dev/null || true
+        fi
+
+        local push_output
+        if push_output=$(git push 2>&1); then
             echo -e "${GREEN}✓${NC} Log pushed to private repo"
         else
-            echo -e "${YELLOW}!${NC} Commit saved locally, push failed (check git remote)"
+            echo -e "${YELLOW}!${NC} Push failed: $push_output"
+            echo -e "${YELLOW}!${NC} Commit saved locally - run 'cd $private_dir && git push' manually"
         fi
     else
-        echo -e "${YELLOW}!${NC} Git commit failed"
+        echo -e "${YELLOW}!${NC} Git commit failed: $commit_output"
     fi
 
     cd "$BOOTIBLE_DIR"
@@ -1096,8 +1120,7 @@ main() {
     echo -e "  ${GREEN}bootible${NC}"
     echo ""
 
-    # Push log to private repo
-    push_log_to_git
+    # Log push handled by EXIT trap (cleanup_and_push_log)
 }
 
 main "$@"
