@@ -333,9 +333,14 @@ install_gh_cli() {
     trap 'sudo steamos-readonly enable 2>/dev/null' EXIT
     sudo steamos-readonly disable 2>/dev/null || true
 
-    # Refresh keyring
+    # Refresh keyrings (both Arch and SteamOS)
+    echo "  Refreshing package keyrings..."
     sudo pacman-key --init 2>/dev/null || true
     sudo pacman-key --populate archlinux 2>/dev/null || true
+    sudo pacman-key --populate holo 2>/dev/null || true
+
+    # Update keyring packages first
+    sudo pacman -Sy --noconfirm archlinux-keyring 2>/dev/null || true
 
     # Install packages
     local packages=""
@@ -345,14 +350,24 @@ install_gh_cli() {
 
     if [[ -n "$packages" ]]; then
         # shellcheck disable=SC2086  # Intentional word splitting
-        sudo pacman -S --noconfirm $packages
+        if ! sudo pacman -S --noconfirm $packages; then
+            echo -e "${YELLOW}!${NC} Pacman install failed, trying with --overwrite..."
+            # shellcheck disable=SC2086
+            sudo pacman -S --noconfirm --overwrite '*' $packages || true
+        fi
     fi
 
     # Restore read-only
     trap - EXIT
     sudo steamos-readonly enable 2>/dev/null || true
 
-    echo -e "${GREEN}✓${NC} GitHub CLI ready"
+    # Verify gh was installed
+    if command -v gh &> /dev/null; then
+        echo -e "${GREEN}✓${NC} GitHub CLI ready"
+    else
+        echo -e "${RED}✗${NC} GitHub CLI installation failed"
+        return 1
+    fi
 }
 
 # Display device code with QR in terminal
@@ -528,9 +543,9 @@ needs_github_auth() {
     if [[ -f "$config_file" ]]; then
         # Count enabled plugins in decky_plugins section
         local plugin_count
-        plugin_count=$(awk '/^decky_plugins:/,/^[^ ]/' "$config_file" | grep -c "enabled: true" 2>/dev/null || echo 0)
+        plugin_count=$(awk '/^decky_plugins:/,/^[^ ]/' "$config_file" 2>/dev/null | grep -c "enabled: true" 2>/dev/null) || plugin_count=0
 
-        if [[ $plugin_count -gt 3 ]]; then
+        if [[ "$plugin_count" =~ ^[0-9]+$ ]] && [[ $plugin_count -gt 3 ]]; then
             return 0  # Need auth
         fi
     fi
