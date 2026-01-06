@@ -97,42 +97,56 @@
     return_content: true
   register: proton_ge_release
   when: install_proton_ge | default(true)
+  failed_when: false
 
 - name: Extract Proton-GE version and download URL
   ansible.builtin.set_fact:
     proton_ge_version: "{{ proton_ge_release.json.tag_name }}"
     proton_ge_url: "{{ proton_ge_release.json.assets | selectattr('name', 'match', '.*\\.tar\\.gz$') | map(attribute='browser_download_url') | first }}"
-  when: install_proton_ge | default(true)
+  when:
+    - install_proton_ge | default(true)
+    - proton_ge_release.json is defined
 
 - name: Check if Proton-GE already installed
   ansible.builtin.stat:
-    path: "{{ deck_home }}/.steam/root/compatibilitytools.d/{{ proton_ge_version }}"
+    path: "{{ deck_home }}/.steam/root/compatibilitytools.d/{{ proton_ge_version | default('GE-Proton') }}"
   register: proton_ge_installed
-  when: install_proton_ge | default(true)
+  when:
+    - install_proton_ge | default(true)
+    - proton_ge_version is defined
 
 - name: Download Proton-GE
   ansible.builtin.get_url:
     url: "{{ proton_ge_url }}"
-    dest: "/tmp/proton-ge.tar.gz"
+    dest: "{{ deck_home }}/.cache/proton-ge.tar.gz"
     mode: '0644'
   when:
     - install_proton_ge | default(true)
-    - not proton_ge_installed.stat.exists
+    - proton_ge_url is defined
+    - not (proton_ge_installed.stat.exists | default(false))
 
 - name: Extract Proton-GE
   ansible.builtin.unarchive:
-    src: "/tmp/proton-ge.tar.gz"
+    src: "{{ deck_home }}/.cache/proton-ge.tar.gz"
     dest: "{{ deck_home }}/.steam/root/compatibilitytools.d/"
     remote_src: true
   when:
     - install_proton_ge | default(true)
-    - not proton_ge_installed.stat.exists
+    - proton_ge_url is defined
+    - not (proton_ge_installed.stat.exists | default(false))
 
 - name: Clean up Proton-GE download
   ansible.builtin.file:
-    path: "/tmp/proton-ge.tar.gz"
+    path: "{{ deck_home }}/.cache/proton-ge.tar.gz"
     state: absent
   when: install_proton_ge | default(true)
+
+- name: Note Proton-GE skipped (check mode or API failure)
+  ansible.builtin.debug:
+    msg: "Proton-GE installation skipped - use ProtonUp-Qt to install manually"
+  when:
+    - install_proton_ge | default(true)
+    - proton_ge_url is not defined
 
 - name: Display Proton tools info
   ansible.builtin.debug:
