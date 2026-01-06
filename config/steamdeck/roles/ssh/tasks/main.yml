@@ -218,6 +218,15 @@
   when:
     - ssh_save_to_private | default(false)
     - ssh_generate_key | default(false)
+  register: ssh_keys_dir
+
+- name: Check if ssh-keys directory exists (for check mode)
+  ansible.builtin.stat:
+    path: "{{ playbook_dir }}/../private/steamdeck/ssh-keys"
+  register: ssh_keys_dir_stat
+  when:
+    - ssh_save_to_private | default(false)
+    - ssh_generate_key | default(false)
 
 - name: Copy public key to private repo
   ansible.builtin.copy:
@@ -229,6 +238,7 @@
     - ssh_save_to_private | default(false)
     - ssh_generate_key | default(false)
     - pubkey_exists.stat.exists | default(false)
+    - ssh_keys_dir_stat.stat.exists | default(false)
 
 - name: Display key saved message
   ansible.builtin.debug:
