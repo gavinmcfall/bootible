@@ -25,9 +25,9 @@
     - name: Verify running on Steam Deck or compatible system
       ansible.builtin.assert:
         that:
-          - ansible_distribution == "Arch" or ansible_os_family == "Archlinux"
+          - ansible_facts['distribution'] == "Arch" or ansible_facts['os_family'] == "Archlinux"
         fail_msg: "This playbook is designed for SteamOS/Arch Linux"
-        success_msg: "Running on compatible system: {{ ansible_distribution }}"
+        success_msg: "Running on compatible system: {{ ansible_facts['distribution'] }}"
       tags: always
 
     # Load configuration overrides
@@ -35,13 +35,13 @@
 
     - name: Check for local configuration
       ansible.builtin.stat:
-        path: "{{ ansible_env.HOME }}/.config/bootible/steamdeck/config.yml"
+        path: "{{ ansible_facts['env']['HOME'] }}/.config/bootible/steamdeck/config.yml"
       register: local_config
       tags: always
 
     - name: Load local configuration
       ansible.builtin.include_vars:
-        file: "{{ ansible_env.HOME }}/.config/bootible/steamdeck/config.yml"
+        file: "{{ ansible_facts['env']['HOME'] }}/.config/bootible/steamdeck/config.yml"
       when: local_config.stat.exists
       tags: always
 
