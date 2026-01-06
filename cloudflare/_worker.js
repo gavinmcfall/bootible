@@ -24,7 +24,7 @@ const ROUTES = {
   '/deck': {
     path: '/targets/deck.sh',
     description: 'Steam Deck (SteamOS)',
-    sha256: 'e17c0c3af6efb2d3d796b93469cdc527026321d907e84e293fc8758d0ff14647',
+    sha256: 'f80aa1afafe261ea216f0574dd8fed8495fdc6fa38645b70348e9a1013021a41',
   },
 };
 
