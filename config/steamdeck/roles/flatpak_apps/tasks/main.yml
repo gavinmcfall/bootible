@@ -99,7 +99,7 @@
   community.general.flatpak:
     name: https://downloads.1password.com/linux/flatpak/1Password.flatpakref
     state: present
-  become: true  # Needed for system-wide flatpakref install
+    method: user  # Use user install - system flatpakref fails on SteamOS
   # Flatpak limitations: no system auth, no SSH agent, browser locks separately
   when:
     - password_manager | default('none') == '1password'
