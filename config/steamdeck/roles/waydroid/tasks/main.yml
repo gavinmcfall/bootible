@@ -68,11 +68,19 @@
     force: true
   when: not waydroid_check.stat.exists
 
+- name: Check if installer script exists (for check mode)
+  ansible.builtin.stat:
+    path: "{{ deck_home }}/Applications/SteamOS-Waydroid-Installer/steamos-waydroid-installer.sh"
+  register: waydroid_installer_script
+  when: not waydroid_check.stat.exists
+
 - name: Make installer executable
   ansible.builtin.file:
     path: "{{ deck_home }}/Applications/SteamOS-Waydroid-Installer/steamos-waydroid-installer.sh"
     mode: '0755'
-  when: not waydroid_check.stat.exists
+  when:
+    - not waydroid_check.stat.exists
+    - waydroid_installer_script.stat.exists | default(false)
 
 # Create desktop shortcut
 - name: Create Waydroid Installer desktop shortcut
