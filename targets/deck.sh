@@ -189,6 +189,247 @@ install_ansible() {
     echo -e "${GREEN}✓${NC} Ansible installed via pacman"
 }
 
+# =============================================================================
+# GitHub Authentication (Device Flow)
+# =============================================================================
+# Provides QR code-based GitHub login for minimal typing on Steam Deck.
+# Uses GitHub's OAuth Device Flow - scan QR with phone, authorize, done.
+
+# Install GitHub CLI and dependencies
+install_gh_cli() {
+    local needs_install=false
+
+    # Check for required tools
+    if ! command -v gh &> /dev/null; then
+        needs_install=true
+    fi
+    if ! command -v jq &> /dev/null; then
+        needs_install=true
+    fi
+    if ! command -v qrencode &> /dev/null; then
+        needs_install=true
+    fi
+
+    if [[ "$needs_install" == "false" ]]; then
+        return 0
+    fi
+
+    echo -e "${BLUE}→${NC} Installing GitHub CLI and dependencies..."
+
+    # Unlock filesystem temporarily
+    trap 'sudo steamos-readonly enable 2>/dev/null' EXIT
+    sudo steamos-readonly disable 2>/dev/null || true
+
+    # Refresh keyring
+    sudo pacman-key --init 2>/dev/null || true
+    sudo pacman-key --populate archlinux 2>/dev/null || true
+
+    # Install packages
+    local packages=""
+    command -v gh &> /dev/null || packages="$packages github-cli"
+    command -v jq &> /dev/null || packages="$packages jq"
+    command -v qrencode &> /dev/null || packages="$packages qrencode"
+
+    if [[ -n "$packages" ]]; then
+        # shellcheck disable=SC2086  # Intentional word splitting
+        sudo pacman -S --noconfirm $packages
+    fi
+
+    # Restore read-only
+    trap - EXIT
+    sudo steamos-readonly enable 2>/dev/null || true
+
+    echo -e "${GREEN}✓${NC} GitHub CLI ready"
+}
+
+# Display device code with QR in terminal
+show_device_code() {
+    local user_code="$1"
+    local verification_url="https://github.com/login/device"
+
+    clear
+    echo ""
+    echo -e "${CYAN}╔═══════════════════════════════════════════════════════════════╗${NC}"
+    echo -e "${CYAN}║                   GitHub Login Required                       ║${NC}"
+    echo -e "${CYAN}╠═══════════════════════════════════════════════════════════════╣${NC}"
+    echo -e "${CYAN}║                                                               ║${NC}"
+    echo -e "${CYAN}║${NC}  Scan QR code with your phone, or visit:                     ${CYAN}║${NC}"
+    echo -e "${CYAN}║${NC}  ${GREEN}github.com/login/device${NC}                                    ${CYAN}║${NC}"
+    echo -e "${CYAN}║                                                               ║${NC}"
+    echo -e "${CYAN}╚═══════════════════════════════════════════════════════════════╝${NC}"
+    echo ""
+
+    # Generate QR code in terminal
+    if command -v qrencode &> /dev/null; then
+        qrencode -t ANSIUTF8 -m 2 "$verification_url"
+    else
+        echo -e "  ${YELLOW}(qrencode not installed - visit URL manually)${NC}"
+    fi
+
+    echo ""
+    echo -e "${CYAN}╔═══════════════════════════════════════════════════════════════╗${NC}"
+    echo -e "${CYAN}║${NC}                                                               ${CYAN}║${NC}"
+    echo -e "${CYAN}║${NC}     Enter code: ${GREEN}${user_code}${NC}                                  ${CYAN}║${NC}"
+    echo -e "${CYAN}║${NC}                                                               ${CYAN}║${NC}"
+    echo -e "${CYAN}╚═══════════════════════════════════════════════════════════════╝${NC}"
+    echo ""
+    echo -e "  ${YELLOW}Waiting for authorization...${NC}"
+    echo ""
+}
+
+# Main GitHub authentication function
+authenticate_github() {
+    # GitHub CLI's OAuth client_id (public, used by gh CLI)
+    local client_id="178c6fc778ccc68e1d6a"
+    local scope="repo,read:org"
+
+    echo -e "${BLUE}→${NC} Setting up GitHub authentication..."
+
+    # Install gh CLI if needed
+    install_gh_cli
+
+    # Check if already authenticated
+    if gh auth status &>/dev/null; then
+        echo -e "${GREEN}✓${NC} Already authenticated with GitHub"
+        return 0
+    fi
+
+    # Request device code from GitHub
+    echo "  Requesting login code..."
+    local response
+    response=$(curl -s -X POST \
+        -H "Accept: application/json" \
+        -d "client_id=$client_id&scope=$scope" \
+        "https://github.com/login/device/code")
+
+    local device_code user_code interval expires_in
+    device_code=$(echo "$response" | jq -r '.device_code // empty')
+    user_code=$(echo "$response" | jq -r '.user_code // empty')
+    interval=$(echo "$response" | jq -r '.interval // 5')
+    expires_in=$(echo "$response" | jq -r '.expires_in // 900')
+
+    if [[ -z "$device_code" || -z "$user_code" ]]; then
+        echo -e "${RED}✗${NC} Failed to get device code from GitHub"
+        echo "  Response: $response"
+        return 1
+    fi
+
+    # Display QR code and user code
+    show_device_code "$user_code"
+
+    # Poll for token
+    local poll_start max_wait current_interval access_token
+    poll_start=$(date +%s)
+    max_wait=$((expires_in > 300 ? 300 : expires_in))  # Cap at 5 minutes
+    current_interval=$interval
+
+    while true; do
+        local now elapsed
+        now=$(date +%s)
+        elapsed=$((now - poll_start))
+
+        if [[ $elapsed -ge $max_wait ]]; then
+            echo ""
+            echo -e "${RED}✗${NC} Authentication timed out"
+            return 1
+        fi
+
+        sleep "$current_interval"
+
+        # Poll for token
+        local token_response
+        token_response=$(curl -s -X POST \
+            -H "Accept: application/json" \
+            -d "client_id=$client_id&device_code=$device_code&grant_type=urn:ietf:params:oauth:grant-type:device_code" \
+            "https://github.com/login/oauth/access_token")
+
+        access_token=$(echo "$token_response" | jq -r '.access_token // empty')
+        local error
+        error=$(echo "$token_response" | jq -r '.error // empty')
+
+        if [[ -n "$access_token" && "$access_token" != "null" ]]; then
+            # Success!
+            echo -e "\r  ${GREEN}✓ Authorized!${NC}                    "
+            break
+        elif [[ "$error" == "slow_down" ]]; then
+            current_interval=$((current_interval + 5))
+        elif [[ "$error" == "expired_token" ]]; then
+            echo ""
+            echo -e "${RED}✗${NC} Device code expired"
+            return 1
+        elif [[ "$error" == "access_denied" ]]; then
+            echo ""
+            echo -e "${RED}✗${NC} Authorization denied"
+            return 1
+        fi
+        # authorization_pending is expected - continue polling
+    done
+
+    # Store token via gh CLI
+    echo "  Storing credentials..."
+
+    # Create secure temp file
+    local token_file
+    token_file="/tmp/gh-token-$(head -c 8 /dev/urandom | xxd -p).tmp"
+    trap "rm -f '$token_file'" RETURN
+
+    echo -n "$access_token" > "$token_file"
+    chmod 600 "$token_file"
+
+    # Pass to gh CLI
+    if cat "$token_file" | gh auth login --with-token 2>/dev/null; then
+        rm -f "$token_file"
+        gh auth setup-git 2>/dev/null || true
+        echo -e "${GREEN}✓${NC} GitHub authentication complete"
+
+        # Export token for playbook
+        GITHUB_TOKEN=$(gh auth token 2>/dev/null)
+        export GITHUB_TOKEN
+        return 0
+    else
+        rm -f "$token_file"
+        echo -e "${RED}✗${NC} Failed to store GitHub credentials"
+        return 1
+    fi
+}
+
+# Check if GitHub auth is needed
+needs_github_auth() {
+    # Already authenticated?
+    if command -v gh &> /dev/null && gh auth status &>/dev/null; then
+        # Export existing token
+        GITHUB_TOKEN=$(gh auth token 2>/dev/null)
+        export GITHUB_TOKEN
+        return 1  # No need to auth
+    fi
+
+    # Check config for enabled Decky plugins (>3 = rate limit risk)
+    local config_file="$BOOTIBLE_DIR/config/$DEVICE/config.yml"
+    local private_config="$BOOTIBLE_DIR/private/$DEVICE/config.yml"
+
+    # Use private config if it exists
+    if [[ -f "$private_config" ]]; then
+        config_file="$private_config"
+    fi
+
+    if [[ -f "$config_file" ]]; then
+        # Count enabled plugins in decky_plugins section
+        local plugin_count
+        plugin_count=$(awk '/^decky_plugins:/,/^[^ ]/' "$config_file" | grep -c "enabled: true" 2>/dev/null || echo 0)
+
+        if [[ $plugin_count -gt 3 ]]; then
+            return 0  # Need auth
+        fi
+    fi
+
+    # Check if private repo uses SSH (needs auth for push)
+    if [[ -n "$PRIVATE_REPO" && "$PRIVATE_REPO" == git@* ]]; then
+        return 0  # Need auth for SSH
+    fi
+
+    return 1  # No need
+}
+
 # Clone bootible
 clone_bootible() {
     if [[ -d "$BOOTIBLE_DIR" ]]; then
@@ -303,6 +544,12 @@ run_playbook() {
         echo ""
     fi
 
+    # Add GitHub token if available
+    if [[ -n "$GITHUB_TOKEN" ]]; then
+        EXTRA_VARS="$EXTRA_VARS -e github_token=$GITHUB_TOKEN"
+        echo -e "${GREEN}✓${NC} GitHub token available for API calls"
+    fi
+
     case $DEVICE in
         steamdeck)
             if [[ -n "$EXTRA_VARS" ]]; then
@@ -335,6 +582,15 @@ main() {
     echo ""
     select_config
     echo ""
+
+    # Check if GitHub auth is needed (many plugins or private repo)
+    if needs_github_auth; then
+        echo ""
+        echo -e "${BLUE}→${NC} GitHub login recommended (many plugins enabled)"
+        authenticate_github || echo -e "${YELLOW}!${NC} Continuing without GitHub auth (may hit rate limits)"
+        echo ""
+    fi
+
     run_playbook
 
     echo ""

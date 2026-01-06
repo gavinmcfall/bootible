@@ -35,11 +35,16 @@ static_ip:
 # API SETTINGS
 # =============================================================================
 # GitHub API rate limits anonymous requests to 60/hour. If you hit rate limits
-# (e.g., installing many Decky plugins), add a personal access token.
-# Create one at: https://github.com/settings/tokens (no scopes needed for public repos)
+# (e.g., installing many Decky plugins), authentication is required.
 #
-# SECURITY: Put this in your private config (private/steamdeck/config.yml),
-# not here in the public repo!
+# AUTOMATIC AUTH (Recommended):
+# If you enable >3 Decky plugins, the bootstrap script will automatically show
+# a QR code for GitHub login - just scan with your phone, no typing needed!
+# The token is stored via `gh auth` and passed to the playbook automatically.
+#
+# MANUAL AUTH (Alternative):
+# Create a token at: https://github.com/settings/tokens (no scopes needed)
+# Put it in your private config (private/steamdeck/config.yml), not here!
 github_token: ""
 
 # =============================================================================
