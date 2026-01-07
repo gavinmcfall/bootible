@@ -1,4 +1,4 @@
-# Install a single Decky plugin from GitHub/GitLab releases
+# Install a single Decky plugin from the official Decky Plugin Store
 # This file is included by main.yml for each enabled plugin
 
 ---
@@ -7,110 +7,25 @@
   ansible.builtin.set_fact:
     plugin_zip_url: ""
     plugin_version: ""
+    plugin_store_name: ""
 
-# ============================================================================
-# GitHub Release Handling
-# ============================================================================
-- name: Get latest GitHub release for {{ plugin.key }}
-  vars:
-    repo_path: >-
-      {{ plugin.value.repo
-        | regex_replace('^https://github.com/', '')
-        | regex_replace('\.git$', '') }}
-    auth_header: >-
-      {{ {'Authorization': 'Bearer ' + github_token} if github_token | default('') | length > 0 else {} }}
-  ansible.builtin.uri:
-    url: "https://api.github.com/repos/{{ repo_path }}/releases/latest"
-    return_content: true
-    headers: "{{ {'Accept': 'application/vnd.github.v3+json'} | combine(auth_header) }}"
-  register: github_release
-  when: plugin.value.repo_type == "github"
-  failed_when: false
-
-- name: Warn on GitHub API failure for {{ plugin.key }}
-  ansible.builtin.debug:
-    msg: "GitHub API failed for {{ plugin.key }}: {{ github_release.msg | default('Unknown error') }} (status: {{ github_release.status | default('N/A') }})"
-  when:
-    - plugin.value.repo_type == "github"
-    - github_release.status | default(0) != 200
-
-- name: Find zip download URL (GitHub) for {{ plugin.key }}
-  ansible.builtin.set_fact:
-    plugin_zip_url: >-
-      {{ (github_release.json.assets
-        | selectattr('name', 'match', '.*\.zip$')
-        | first).browser_download_url }}
-    plugin_version: "{{ github_release.json.tag_name }}"
-  when:
-    - plugin.value.repo_type == "github"
-    - github_release.status | default(0) == 200
-    - github_release.json.assets | default([]) | selectattr('name', 'match', '.*\.zip$') | list | length > 0
-  failed_when: false
-
-# ============================================================================
-# GitLab Release Handling
-# ============================================================================
-# GitLab API: Get project ID from URL, then fetch releases
-- name: Extract GitLab project path for {{ plugin.key }}
-  ansible.builtin.set_fact:
-    gitlab_host: "{{ plugin.value.repo | regex_replace('^https://([^/]+)/.*', '\\1') }}"
-    gitlab_project_path: >-
-      {{ plugin.value.repo
-        | regex_replace('^https://[^/]+/', '')
-        | regex_replace('\.git$', '')
-        | urlencode
-        | regex_replace('/', '%2F') }}
-  when: plugin.value.repo_type == "gitlab"
-
-- name: Get latest GitLab release for {{ plugin.key }}
-  ansible.builtin.uri:
-    url: "https://{{ gitlab_host }}/api/v4/projects/{{ gitlab_project_path }}/releases"
-    return_content: true
-  register: gitlab_releases
-  when: plugin.value.repo_type == "gitlab"
-  failed_when: false
-
-- name: Warn on GitLab API failure for {{ plugin.key }}
-  ansible.builtin.debug:
-    msg: "GitLab API failed for {{ plugin.key }}: {{ gitlab_releases.msg | default('Unknown error') }} (status: {{ gitlab_releases.status | default('N/A') }})"
-  when:
-    - plugin.value.repo_type == "gitlab"
-    - gitlab_releases.status | default(0) != 200
-
-- name: Find zip download URL (GitLab) for {{ plugin.key }}
-  vars:
-    release_links: "{{ gitlab_releases.json[0].assets.links | default([]) }}"
-    zip_by_name: "{{ release_links | selectattr('name', 'match', '.*\\.zip$') | list }}"
-    zip_by_url: "{{ release_links | selectattr('url', 'match', '.*\\.zip$') | list }}"
-  ansible.builtin.set_fact:
-    plugin_zip_url: >-
-      {{ (zip_by_name | first).direct_asset_url
-        | default((zip_by_url | first).url)
-        | default('') }}
-    plugin_version: "{{ gitlab_releases.json[0].tag_name }}"
-  when:
-    - plugin.value.repo_type == "gitlab"
-    - gitlab_releases.status | default(0) == 200
-    - gitlab_releases.json | default([]) | length > 0
-    - (zip_by_name | length > 0) or (zip_by_url | length > 0)
-  failed_when: false
-
-# ============================================================================
-# Decky Store Fallback
-# ============================================================================
-# If GitHub/GitLab didn't provide a .zip asset, try the Decky Plugin Store
+# Fetch the Decky Plugin Store catalog
 - name: Fetch Decky store plugin list for {{ plugin.key }}
   ansible.builtin.uri:
     url: "https://plugins.deckbrew.xyz/plugins"
     return_content: true
   register: decky_store
-  when: plugin_zip_url | default('') | length == 0
   failed_when: false
 
+- name: Warn on Decky store fetch failure for {{ plugin.key }}
+  ansible.builtin.debug:
+    msg: "Could not fetch Decky store: {{ decky_store.msg | default('Unknown error') }}"
+  when: decky_store.status | default(0) != 200
+
+# Find plugin in the store by store_name
 - name: Find plugin in Decky store for {{ plugin.key }}
   vars:
-    # Try store_name from config, else capitalize plugin key
-    search_name: "{{ plugin.value.store_name | default(plugin.key | replace('_', ' ') | title | replace(' ', '')) }}"
+    search_name: "{{ plugin.value.store_name | default(plugin.key) }}"
     store_plugin: "{{ decky_store.json | default([]) | selectattr('name', 'equalto', search_name) | first | default({}) }}"
     latest_version: "{{ store_plugin.versions[0] | default({}) }}"
   ansible.builtin.set_fact:
@@ -118,32 +33,37 @@
     plugin_version: "{{ latest_version.name }}"
     plugin_store_name: "{{ store_plugin.name | default('') }}"
   when:
-    - plugin_zip_url | default('') | length == 0
     - decky_store.status | default(0) == 200
-    - store_plugin.versions | default([]) | length > 0
+    - store_plugin.name is defined
+    - latest_version.hash is defined
   failed_when: false
 
-- name: Log Decky store fallback for {{ plugin.key }}
+- name: Warn if plugin not found in store for {{ plugin.key }}
   ansible.builtin.debug:
-    msg: "Using Decky store for {{ plugin.key }} ({{ plugin_store_name | default('') }} v{{ plugin_version | default('?') }})"
-  when:
-    - plugin_store_name | default('') | length > 0
+    msg: "Plugin '{{ plugin.value.store_name | default(plugin.key) }}' not found in Decky store - check store_name in config"
+  when: plugin_store_name | default('') | length == 0
 
 # Check if plugin is already installed
 - name: Check if plugin directory exists for {{ plugin.key }}
-  ansible.builtin.stat:
-    path: "{{ deck_home }}/homebrew/plugins/{{ plugin.key }}"
-  register: plugin_dir
+  ansible.builtin.find:
+    paths: "{{ deck_home }}/homebrew/plugins"
+    file_type: directory
+    recurse: false
+  register: installed_plugins
+
+- name: Check if this plugin is installed for {{ plugin.key }}
+  ansible.builtin.set_fact:
+    plugin_installed: "{{ installed_plugins.files | map(attribute='path') | map('basename') | select('search', plugin.key) | list | length > 0 }}"
 
 # Download plugin zip
-- name: Download plugin zip for {{ plugin.key }}
+- name: Download plugin for {{ plugin.key }}
   ansible.builtin.get_url:
     url: "{{ plugin_zip_url }}"
     dest: "{{ plugin_temp.path }}/{{ plugin.key }}.zip"
     mode: '0644'
   when:
     - plugin_zip_url | default('') | length > 0
-    - not plugin_dir.stat.exists
+    - not plugin_installed
   register: plugin_download
   failed_when: false
 
@@ -162,21 +82,20 @@
     remote_src: true
   when:
     - plugin_download is defined
-    - plugin_download is not failed
-    - plugin_download.changed | default(false)
+    - plugin_download is changed
   failed_when: false
 
 # Log result
 - name: Log installation result for {{ plugin.key }}
   ansible.builtin.debug:
     msg: >-
-      {% if plugin_download is defined and plugin_download.changed | default(false) %}
-      Installed {{ plugin.key }} {{ plugin_version | default('') }}
-      {% elif plugin_dir.stat.exists %}
-      {{ plugin.key }} already installed
+      {% if plugin_download is defined and plugin_download is changed %}
+      ✓ Installed {{ plugin_store_name }} v{{ plugin_version }}
+      {% elif plugin_installed %}
+      ✓ {{ plugin.key }} already installed
       {% elif plugin_zip_url | default('') | length == 0 %}
-      Could not find {{ plugin.key }} release - install manually via Decky store
+      ✗ {{ plugin.key }} not found in Decky store (check store_name)
       {% else %}
-      Could not install {{ plugin.key }} - check repo URL or install manually
+      ✗ Could not install {{ plugin.key }}
       {% endif %}
     verbosity: 0

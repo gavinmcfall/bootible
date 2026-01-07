@@ -24,12 +24,10 @@ hostname: ""
 # Leave enabled: false to use DHCP (default)
 static_ip:
   enabled: false
-  connection: "Wired connection 1"  # NetworkManager connection name (use 'nmcli con show')
-  address: ""       # e.g., "192.168.1.100/24"
-  gateway: ""       # e.g., "192.168.1.1"
-  dns:              # DNS servers
-    - ""            # e.g., "8.8.8.8"
-    # - ""          # e.g., "8.8.4.4"
+  connection: ""               # NetworkManager connection name (use 'nmcli con show')
+  address: ""                  # e.g., "192.168.1.100/24"
+  gateway: ""                  # e.g., "192.168.1.1"
+  dns: []                      # e.g., ["1.1.1.1", "8.8.8.8"]
 
 # =============================================================================
 # API SETTINGS
@@ -202,155 +200,113 @@ install_decky: true
 
 # Decky Plugins
 # -------------
-# Plugins are installed from their GitHub/GitLab releases.
+# Plugins are installed from the official Decky Plugin Store.
 # Set enabled: true/false to control which plugins get installed.
+# store_name must match the exact name in the Decky store.
+#
+# Browse available plugins: https://plugins.deckbrew.xyz/
 decky_plugins:
   # Performance & System
   powertools:
     enabled: true
-    description: "CPU/GPU control, per-game profiles"
-    repo: "https://gitlab.com/NGnius/PowerTools"
-    repo_type: "gitlab"
     store_name: "PowerTools"
+    description: "CPU/GPU control, per-game profiles"
 
   autosuspend:
     enabled: false
-    description: "Auto-suspend after inactivity"
-    repo: "https://github.com/jurassicplayer/decky-autosuspend"
-    repo_type: "github"
     store_name: "AutoSuspend"
+    description: "Auto-suspend after inactivity"
 
   battery_tracker:
     enabled: false
-    description: "Track battery health over time"
-    repo: "https://github.com/safijari/steam-deck-battery-tracker"
-    repo_type: "github"
     store_name: "Battery Tracker"
+    description: "Track battery health over time"
 
   # Game Info & Store
   protondb_badges:
     enabled: true
-    description: "Show ProtonDB compatibility ratings"
-    repo: "https://github.com/OMGDuke/protondb-decky"
-    repo_type: "github"
     store_name: "ProtonDB Badges"
+    description: "Show ProtonDB compatibility ratings"
 
   steamgriddb:
     enabled: true
-    description: "Custom game artwork"
-    repo: "https://github.com/SteamGridDB/decky-steamgriddb"
-    repo_type: "github"
     store_name: "SteamGridDB"
+    description: "Custom game artwork"
 
   hltb:
     enabled: false
-    description: "How Long to Beat game times"
-    repo: "https://github.com/morwy/hltb-for-deck"
-    repo_type: "github"
     store_name: "HLTB for Deck"
+    description: "How Long to Beat game times"
 
   playtime:
     enabled: false
-    description: "Detailed play time tracking"
-    repo: "https://github.com/0u73r-h34v3n/SDH-PlayTime"
-    repo_type: "github"
     store_name: "PlayTime"
+    description: "Detailed play time tracking"
 
   isthereanydeal:
     enabled: false
-    description: "Game deal notifications"
-    repo: "https://github.com/JtdeGraaf/IsThereAnyDeal-DeckyPlugin"
-    repo_type: "github"
     store_name: "IsThereAnyDeal"
+    description: "Game deal notifications"
 
   # Customization
   css_loader:
     enabled: false
-    description: "Custom themes for Gaming Mode"
-    repo: "https://github.com/DeckThemes/SDH-CssLoader"
-    repo_type: "github"
     store_name: "CSS Loader"
+    description: "Custom themes for Gaming Mode"
 
   animation_changer:
     enabled: false
-    description: "Custom boot/suspend animations"
-    repo: "https://github.com/TheLogicMaster/SDH-AnimationChanger"
-    repo_type: "github"
     store_name: "Animation Changer"
+    description: "Custom boot/suspend animations"
 
   # Connectivity
   bluetooth:
     enabled: false
-    description: "Better Bluetooth management"
-    repo: "https://github.com/Outpox/Bluetooth"
-    repo_type: "github"
     store_name: "Bluetooth"
-
-  bt_wake_control:
-    enabled: false
-    description: "Bluetooth wake control"
-    repo: "https://gitlab.com/finewolf-projects/decky-plugin-bluetooth-wake-control"
-    repo_type: "gitlab"
-    store_name: "BT Wake Control"
+    description: "Better Bluetooth management"
 
   tailscale_control:
     enabled: false
-    description: "Tailscale VPN control from Gaming Mode"
-    repo: "https://github.com/saumya-banthia/tailscale-control"
-    repo_type: "github"
     store_name: "Tailscale Control"
+    description: "Tailscale VPN control from Gaming Mode"
 
   kde_connect:
     enabled: false
-    description: "KDE Connect integration"
-    repo: "https://github.com/safijari/Decky-KDE-Connect"
-    repo_type: "github"
     store_name: "KDE Connect"
+    description: "KDE Connect integration"
 
   # Sync & Transfer
   decky_cloud_save:
     enabled: false
-    description: "Cloud save sync for non-Steam games"
-    repo: "https://github.com/GedasFX/decky-cloud-save"
-    repo_type: "github"
     store_name: "Decky Cloud Save"
+    description: "Cloud save sync for non-Steam games"
 
   deckmtp:
     enabled: false
-    description: "MTP file transfer support"
-    repo: "https://github.com/dafta/DeckMTP"
-    repo_type: "github"
     store_name: "DeckMTP"
+    description: "MTP file transfer support"
 
   autoflatpaks:
     enabled: false
-    description: "Auto-update Flatpak apps"
-    repo: "https://github.com/jurassicplayer/decky-autoflatpaks"
-    repo_type: "github"
     store_name: "AutoFlatpaks"
+    description: "Auto-update Flatpak apps"
 
   # Social & Notifications
   discord_status:
     enabled: false
-    description: "Show game status on Discord"
-    repo: "https://github.com/andrewburgess/steamdeck-discord-status"
-    repo_type: "github"
     store_name: "Discord Status"
+    description: "Show game status on Discord"
 
   decky_notifications:
     enabled: false
-    description: "Desktop notifications in Gaming Mode"
-    repo: "https://github.com/Firemoon777/decky-notifications"
-    repo_type: "github"
     store_name: "Decky Notifications"
+    description: "Desktop notifications in Gaming Mode"
 
   # Audio
   magicpods:
     enabled: false
-    description: "AirPods battery level & controls"
-    repo: "https://github.com/steam3d/MagicPodsDecky"
-    repo_type: "github"
     store_name: "MagicPods"
+    description: "AirPods battery level & controls"
 
 # Proton Tools
 # ------------
