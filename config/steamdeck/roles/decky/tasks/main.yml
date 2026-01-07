@@ -79,12 +79,27 @@
     path: "{{ deck_home }}/.cache/install_decky.sh"
     state: absent
 
-# Ensure plugins directory exists
+# Fix ownership - Decky installer runs as root and creates ~/homebrew as root
+# We need deck:deck ownership so plugins can be extracted
+- name: Fix homebrew directory ownership
+  ansible.builtin.file:
+    path: "{{ deck_home }}/homebrew"
+    state: directory
+    owner: deck
+    group: deck
+    mode: '0755'
+    recurse: true
+  become: true
+
+# Ensure plugins directory exists with correct ownership
 - name: Ensure Decky plugins directory exists
   ansible.builtin.file:
     path: "{{ deck_home }}/homebrew/plugins"
     state: directory
+    owner: deck
+    group: deck
     mode: '0755'
+  become: true
 
 # Install Decky Plugins
 # ---------------------
