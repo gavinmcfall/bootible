@@ -355,9 +355,11 @@ install_ansible() {
         sudo steamos-readonly disable 2>/dev/null || true
 
         # Refresh keyring to avoid PGP signature errors
+        # SteamOS uses both archlinux and holo (Valve's) keyrings
         echo "  Refreshing pacman keyring..."
         sudo pacman-key --init 2>/dev/null || true
         sudo pacman-key --populate archlinux 2>/dev/null || true
+        sudo pacman-key --populate holo 2>/dev/null || true
         sudo pacman -Sy --noconfirm archlinux-keyring 2>/dev/null || true
 
         sudo pacman -S --noconfirm ansible
