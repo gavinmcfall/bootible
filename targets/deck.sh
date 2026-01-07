@@ -290,23 +290,29 @@ create_snapshot() {
     SNAPSHOT_DIR="/.snapshots"
     SNAPSHOT_NAME="pre-bootible-$(date +%Y%m%d-%H%M%S)"
 
-    # Create snapshots directory if needed
-    if [[ ! -d "$SNAPSHOT_DIR" ]]; then
-        sudo mkdir -p "$SNAPSHOT_DIR"
-    fi
+    # Use subshell to handle read-only filesystem
+    (
+        trap 'sudo steamos-readonly enable 2>/dev/null' EXIT
+        sudo steamos-readonly disable 2>/dev/null || true
 
-    # Create the snapshot
-    if sudo btrfs subvolume snapshot / "$SNAPSHOT_DIR/$SNAPSHOT_NAME" 2>/dev/null; then
-        echo -e "${GREEN}✓${NC} Snapshot created: $SNAPSHOT_DIR/$SNAPSHOT_NAME"
-        echo ""
-        echo -e "  ${CYAN}To restore if needed:${NC}"
-        echo "    sudo btrfs subvolume set-default $SNAPSHOT_DIR/$SNAPSHOT_NAME"
-        echo "    sudo reboot"
-        echo ""
-    else
-        echo -e "${YELLOW}!${NC} Could not create snapshot (may need root subvolume)"
-        echo "  Continuing without snapshot..."
-    fi
+        # Create snapshots directory if needed
+        if [[ ! -d "$SNAPSHOT_DIR" ]]; then
+            sudo mkdir -p "$SNAPSHOT_DIR"
+        fi
+
+        # Create the snapshot
+        if sudo btrfs subvolume snapshot / "$SNAPSHOT_DIR/$SNAPSHOT_NAME" 2>/dev/null; then
+            echo -e "${GREEN}✓${NC} Snapshot created: $SNAPSHOT_DIR/$SNAPSHOT_NAME"
+            echo ""
+            echo -e "  ${CYAN}To restore if needed:${NC}"
+            echo "    sudo btrfs subvolume set-default $SNAPSHOT_DIR/$SNAPSHOT_NAME"
+            echo "    sudo reboot"
+            echo ""
+        else
+            echo -e "${YELLOW}!${NC} Could not create snapshot (may need root subvolume)"
+            echo "  Continuing without snapshot..."
+        fi
+    )
 }
 
 # Install Ansible (for Steam Deck)
