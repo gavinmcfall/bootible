@@ -1,0 +1,128 @@
+/* Bootible Custom Styles */
+
+/* Custom primary color for gaming theme */
+:root {
+  --md-primary-fg-color: #7c3aed;
+  --md-primary-fg-color--light: #8b5cf6;
+  --md-primary-fg-color--dark: #6d28d9;
+  --md-accent-fg-color: #06b6d4;
+}
+
+[data-md-color-scheme="slate"] {
+  --md-primary-fg-color: #8b5cf6;
+  --md-primary-fg-color--light: #a78bfa;
+  --md-primary-fg-color--dark: #7c3aed;
+  --md-accent-fg-color: #22d3ee;
+}
+
+/* Hero section styling */
+.md-typeset .hero {
+  text-align: center;
+  padding: 2rem 0;
+}
+
+.md-typeset .hero h1 {
+  font-size: 2.5rem;
+  font-weight: 700;
+  margin-bottom: 1rem;
+}
+
+.md-typeset .hero .tagline {
+  font-size: 1.25rem;
+  opacity: 0.8;
+  margin-bottom: 2rem;
+}
+
+/* Command boxes */
+.md-typeset .command-box {
+  background: var(--md-code-bg-color);
+  border-radius: 0.5rem;
+  padding: 1rem 1.5rem;
+  margin: 1rem 0;
+  font-family: var(--md-code-font-family);
+}
+
+.md-typeset .command-box code {
+  background: transparent;
+  padding: 0;
+}
+
+/* Platform badges */
+.md-typeset .badge {
+  display: inline-block;
+  padding: 0.25rem 0.75rem;
+  border-radius: 1rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.md-typeset .badge-steamdeck {
+  background: #1a9fff;
+  color: white;
+}
+
+.md-typeset .badge-rogally {
+  background: #ff0000;
+  color: white;
+}
+
+.md-typeset .badge-windows {
+  background: #0078d4;
+  color: white;
+}
+
+/* Feature cards enhancement */
+.md-typeset .grid.cards > ul > li {
+  border: 1px solid var(--md-default-fg-color--lightest);
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.md-typeset .grid.cards > ul > li:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+[data-md-color-scheme="slate"] .md-typeset .grid.cards > ul > li:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+/* Code block improvements */
+.md-typeset pre > code {
+  border-radius: 0.375rem;
+}
+
+/* Tab improvements for platform toggle */
+.md-typeset .tabbed-labels > label {
+  font-weight: 600;
+}
+
+/* Admonition improvements */
+.md-typeset .admonition,
+.md-typeset details {
+  border-radius: 0.5rem;
+}
+
+/* Table improvements */
+.md-typeset table:not([class]) {
+  border-radius: 0.5rem;
+  overflow: hidden;
+}
+
+.md-typeset table:not([class]) th {
+  background: var(--md-default-fg-color--lightest);
+}
+
+[data-md-color-scheme="slate"] .md-typeset table:not([class]) th {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+/* Keyboard keys styling */
+.md-typeset kbd {
+  border-radius: 0.25rem;
+}
+
+/* Footer improvements */
+.md-footer {
+  margin-top: 2rem;
+}
