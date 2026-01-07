@@ -95,6 +95,40 @@
     - (zip_by_name | length > 0) or (zip_by_url | length > 0)
   failed_when: false
 
+# ============================================================================
+# Decky Store Fallback
+# ============================================================================
+# If GitHub/GitLab didn't provide a .zip asset, try the Decky Plugin Store
+- name: Fetch Decky store plugin list for {{ plugin.key }}
+  ansible.builtin.uri:
+    url: "https://plugins.deckbrew.xyz/plugins"
+    return_content: true
+  register: decky_store
+  when: plugin_zip_url | default('') | length == 0
+  failed_when: false
+
+- name: Find plugin in Decky store for {{ plugin.key }}
+  vars:
+    # Try store_name from config, else capitalize plugin key
+    search_name: "{{ plugin.value.store_name | default(plugin.key | replace('_', ' ') | title | replace(' ', '')) }}"
+    store_plugin: "{{ decky_store.json | default([]) | selectattr('name', 'equalto', search_name) | first | default({}) }}"
+    latest_version: "{{ store_plugin.versions[0] | default({}) }}"
+  ansible.builtin.set_fact:
+    plugin_zip_url: "https://cdn.tzatzikiweeb.moe/file/steam-deck-homebrew/versions/{{ latest_version.hash }}.zip"
+    plugin_version: "{{ latest_version.name }}"
+    plugin_store_name: "{{ store_plugin.name | default('') }}"
+  when:
+    - plugin_zip_url | default('') | length == 0
+    - decky_store.status | default(0) == 200
+    - store_plugin.versions | default([]) | length > 0
+  failed_when: false
+
+- name: Log Decky store fallback for {{ plugin.key }}
+  ansible.builtin.debug:
+    msg: "Using Decky store for {{ plugin.key }} ({{ plugin_store_name | default('') }} v{{ plugin_version | default('?') }})"
+  when:
+    - plugin_store_name | default('') | length > 0
+
 # Check if plugin is already installed
 - name: Check if plugin directory exists for {{ plugin.key }}
   ansible.builtin.stat:
