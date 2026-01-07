@@ -602,7 +602,7 @@ export default {
     const url = new URL(request.url);
     const path = url.pathname;
 
-    // Handle root path - landing page for browsers, help text for CLI
+    // Handle root path - landing page for browsers, redirect CLI to /deck
     if (path === '/' || path === '') {
       if (isBrowser(request)) {
         return new Response(getLandingPage(), {
@@ -612,9 +612,8 @@ export default {
           },
         });
       }
-      return new Response(getPlainTextHelp(), {
-        headers: { 'Content-Type': 'text/plain; charset=utf-8' },
-      });
+      // CLI request (curl, wget) - redirect to /deck for convenience
+      return Response.redirect(`${url.origin}/deck`, 302);
     }
 
     // Handle docs page - fetch README from GitHub and render as HTML
