@@ -143,15 +143,15 @@ function Install-WingetPackage {
             @{ ExitCode = $LASTEXITCODE; Output = $result }
         } -ArgumentList $PackageId, $Source
 
-        $completed = Wait-Job $job -Timeout $TimeoutSeconds
+        $completed = Wait-Job -Id $job.Id -Timeout $TimeoutSeconds
 
         if ($completed) {
-            $jobResult = Receive-Job $job
-            Remove-Job $job -Force
+            $jobResult = Receive-Job -Id $job.Id
+            Remove-Job -Id $job.Id -Force
             return $jobResult
         } else {
-            Stop-Job $job -ErrorAction SilentlyContinue
-            Remove-Job $job -Force -ErrorAction SilentlyContinue
+            Stop-Job -Id $job.Id -ErrorAction SilentlyContinue
+            Remove-Job -Id $job.Id -Force -ErrorAction SilentlyContinue
             Get-Process -Name "winget" -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
             return @{ ExitCode = -1; Output = "Timeout after $TimeoutSeconds seconds"; TimedOut = $true }
         }
