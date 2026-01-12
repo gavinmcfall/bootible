@@ -26,6 +26,11 @@ const ROUTES = {
     description: 'Steam Deck (SteamOS)',
     sha256: 'c23f103215486331469565e3448281c1c0edb6e0735554a60b975951de4f1183',
   },
+  '/android': {
+    path: '/targets/android.sh',
+    description: 'Android (Wireless ADB)',
+    sha256: '6dc598eac5795f19c785b8a0494faa4c0e87e09afb5555c6661cad001bffdfc3',
+  },
 };
 
 // Cache settings
@@ -111,6 +116,9 @@ Usage:
   ROG Ally X:
     irm https://bootible.dev/rog | iex
 
+  Android (from host with ADB):
+    curl -fsSL https://bootible.dev/android | bash
+
 More info: https://github.com/bootible/bootible
 `;
 }
@@ -125,7 +133,7 @@ function getLandingPage() {
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Bootible - One-liner setup for gaming handhelds</title>
-  <meta name="description" content="Bootible automates the setup of Steam Deck, ROG Ally X, and other gaming devices with a single command.">
+  <meta name="description" content="Bootible automates the setup of Steam Deck, ROG Ally X, Android handhelds, and other gaming devices with a single command.">
   <link rel="icon" type="image/png" href="/favicon.png">
   <style>
     :root {
@@ -189,7 +197,7 @@ function getLandingPage() {
     .callout-text { color: var(--text-secondary); font-size: 0.9rem; }
     .callout-link { color: var(--accent); text-decoration: none; font-weight: 500; white-space: nowrap; }
     .callout-link:hover { text-decoration: underline; }
-    .devices { display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; margin-bottom: 60px; }
+    .devices { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-bottom: 60px; }
     .device-card {
       background: var(--bg-card);
       border: 1px solid var(--border);
@@ -220,6 +228,7 @@ function getLandingPage() {
     .device-info { flex: 1; }
     .device-name { font-size: 1.2rem; font-weight: 600; margin-bottom: 2px; }
     .device-name .variant { font-size: 0.75rem; font-weight: 400; color: var(--text-muted); }
+    .device-name .beta-badge { font-size: 0.6rem; font-weight: 600; background: linear-gradient(135deg, #f97316, #ea580c); color: white; padding: 2px 6px; border-radius: 4px; vertical-align: middle; margin-left: 4px; }
     .device-platform { color: var(--text-muted); font-size: 0.8rem; }
     .command-wrapper { display: flex; flex-direction: column; gap: 8px; }
     .copy-btn {
@@ -290,7 +299,8 @@ function getLandingPage() {
     }
     .github-link:hover { background: var(--bg-card-hover); border-color: var(--accent); }
     .github-link svg { width: 20px; height: 20px; fill: currentColor; }
-    @media (max-width: 700px) { .devices { grid-template-columns: 1fr; } }
+    @media (max-width: 900px) { .devices { grid-template-columns: repeat(2, 1fr); } }
+    @media (max-width: 600px) { .devices { grid-template-columns: 1fr; } }
     @media (max-width: 600px) {
       .hero h1 { font-size: 2.5rem; }
       .tagline { font-size: 1.1rem; }
@@ -344,6 +354,22 @@ function getLandingPage() {
           <button class="copy-btn" onclick="copyCommand(this, 'irm https://bootible.dev/rog | iex')">Copy</button>
           <div class="command-block">
             <code>irm https://bootible.dev/rog | iex</code>
+          </div>
+        </div>
+      </div>
+
+      <div class="device-card">
+        <div class="device-header">
+          <img class="device-icon" src="/android.png" alt="Android">
+          <div class="device-info">
+            <h3 class="device-name">Android <span class="variant">(via ADB)</span> <span class="beta-badge">BETA</span></h3>
+            <p class="device-platform">Gaming Handhelds</p>
+          </div>
+        </div>
+        <div class="command-wrapper">
+          <button class="copy-btn" onclick="copyCommand(this, 'curl -fsSL https://bootible.dev/android | bash')">Copy</button>
+          <div class="command-block">
+            <code>curl -fsSL https://bootible.dev/android | bash</code>
           </div>
         </div>
       </div>

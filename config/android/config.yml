@@ -1,0 +1,858 @@
+# Bootible Configuration - Android
+# =================================
+# Default settings for Android gaming handheld setup.
+# Override in private/device/android/<DeviceName>/config.yml
+#
+# Usage:
+#   # Preview what will happen (dry run - default):
+#   curl -fsSL https://bootible.dev/android | bash
+#
+#   # Run for real after reviewing:
+#   bootible-android
+
+---
+# =============================================================================
+# CONNECTION
+# =============================================================================
+
+connection:
+  method: wireless
+  ip: ""
+  port: 5555
+  pairing_port: ""
+  pairing_code: ""
+  timeout: 30
+  retry_attempts: 3
+  retry_delay: 5
+
+# =============================================================================
+# APK INSTALLATION
+# =============================================================================
+# Sources: "url" (direct download), "local" (from private/), or "fdroid"
+# See apps-reference.md for detailed app descriptions and recommendations.
+
+install_apks: true
+
+apks:
+  # ---------------------------------------------------------------------------
+  # EMULATOR FRONTENDS
+  # ---------------------------------------------------------------------------
+  daijisho:
+    enabled: false
+    source: url
+    url: "https://github.com/TapiocaFox/Daijisho/releases/latest/download/Daijisho.apk"
+    package_name: "com.daijishou.daijishou"
+
+  pegasus:
+    enabled: false
+    source: url
+    url: "https://github.com/mmatyas/pegasus-frontend/releases/latest/download/pegasus-fe_android.apk"
+    package_name: "org.pegasus_frontend.android"
+
+  es_de:
+    enabled: false
+    source: local
+    path: "android/apks/ES-DE.apk"
+    package_name: "org.es_de.frontend"
+
+  reset_collection:
+    enabled: false
+    source: local
+    path: "android/apks/ResetCollection.apk"
+    package_name: "com.resetcollection.app"
+
+  launchbox:
+    enabled: false
+    source: local
+    path: "android/apks/LaunchBox.apk"
+    package_name: "com.launchbox.android"
+
+  arc_browser:
+    enabled: false
+    source: local
+    path: "android/apks/ArcBrowser.apk"
+    package_name: "com.arcbrowser.app"
+
+  dig:
+    enabled: false
+    source: local
+    path: "android/apks/DIG.apk"
+    package_name: "com.digdroid.app"
+
+  beacon:
+    enabled: false
+    source: local
+    path: "android/apks/Beacon.apk"
+    package_name: "com.beacon.launcher"
+
+  # ---------------------------------------------------------------------------
+  # ROM MANAGEMENT
+  # ---------------------------------------------------------------------------
+  romm_mobile:
+    enabled: false
+    source: local
+    path: "android/apks/romm-mobile.apk"
+    package_name: "com.romm.mobile"
+
+  # ---------------------------------------------------------------------------
+  # EMULATORS - MULTI-SYSTEM
+  # ---------------------------------------------------------------------------
+  retroarch:
+    enabled: false
+    source: fdroid
+    package: "com.retroarch"
+    package_name: "com.retroarch"
+
+  retroarch_plus:
+    enabled: false
+    source: local
+    path: "android/apks/RetroArch-Plus.apk"
+    package_name: "com.retroarch.aarch64"
+
+  lemuroid:
+    enabled: false
+    source: url
+    url: "https://github.com/Swordfish90/Lemuroid/releases/latest/download/lemuroid-release.apk"
+    package_name: "com.swordfish.lemuroid"
+
+  # ---------------------------------------------------------------------------
+  # EMULATORS - NINTENDO
+  # ---------------------------------------------------------------------------
+  nes_emu:
+    enabled: false
+    source: local
+    path: "android/apks/NES.emu.apk"
+    package_name: "com.explusalpha.NesEmu"
+
+  snes9x_ex:
+    enabled: false
+    source: local
+    path: "android/apks/Snes9xEX+.apk"
+    package_name: "com.explusalpha.Snes9xPlus"
+
+  gba_emu:
+    enabled: false
+    source: local
+    path: "android/apks/GBA.emu.apk"
+    package_name: "com.explusalpha.GbaEmu"
+
+  gbc_emu:
+    enabled: false
+    source: local
+    path: "android/apks/GBC.emu.apk"
+    package_name: "com.explusalpha.GbcEmu"
+
+  pizza_boy_gba:
+    enabled: false
+    source: local
+    path: "android/apks/PizzaBoyGBA.apk"
+    package_name: "it.dbtecno.pizzaboygba"
+
+  pizza_boy_gbc:
+    enabled: false
+    source: local
+    path: "android/apks/PizzaBoyGBC.apk"
+    package_name: "it.dbtecno.pizzaboygbc"
+
+  melonds:
+    enabled: false
+    source: url
+    url: "https://github.com/melonDS-emu/melonDS/releases/latest/download/melonDS-android.apk"
+    package_name: "net.kuribo64.melonDS"
+
+  drastic:
+    enabled: false
+    source: local
+    path: "android/apks/DraStic.apk"
+    package_name: "com.dsemu.drastic"
+
+  m64plus_fz:
+    enabled: false
+    source: fdroid
+    package: "org.mupen64plusae.v3.fzurita"
+    package_name: "org.mupen64plusae.v3.fzurita"
+
+  dolphin:
+    enabled: false
+    source: url
+    url: "https://dolphin-emu.org/download/latest-android/"
+    package_name: "org.dolphinemu.dolphinemu"
+
+  lime3ds:
+    enabled: false
+    source: url
+    url: "https://github.com/Lime3DS/Lime3DS/releases/latest/download/Lime3DS-Android.apk"
+    package_name: "io.github.lime3ds.android"
+
+  sudachi:
+    enabled: false
+    source: local
+    path: "android/apks/Sudachi.apk"
+    package_name: "org.sudachi.sudachi_emu"
+
+  citron:
+    enabled: false
+    source: local
+    path: "android/apks/Citron.apk"
+    package_name: "org.citron.citron_emu"
+
+  # ---------------------------------------------------------------------------
+  # EMULATORS - PLAYSTATION
+  # ---------------------------------------------------------------------------
+  duckstation:
+    enabled: false
+    source: url
+    url: "https://github.com/stenzek/duckstation/releases/latest/download/duckstation-android-arm64.apk"
+    package_name: "com.github.stenzek.duckstation"
+
+  ppsspp:
+    enabled: false
+    source: fdroid
+    package: "org.ppsspp.ppsspp"
+    package_name: "org.ppsspp.ppsspp"
+
+  nethersx2:
+    enabled: false
+    source: local
+    path: "android/apks/NetherSX2.apk"
+    package_name: "xyz.aethersx2.android"
+
+  aethersx2:
+    enabled: false
+    source: local
+    path: "android/apks/AetherSX2.apk"
+    package_name: "xyz.aethersx2.android"
+
+  vita3k:
+    enabled: false
+    source: url
+    url: "https://github.com/Vita3K/Vita3K-Android/releases/latest/download/Vita3K-Android.apk"
+    package_name: "org.vita3k.emulator"
+
+  # ---------------------------------------------------------------------------
+  # EMULATORS - SEGA
+  # ---------------------------------------------------------------------------
+  flycast:
+    enabled: false
+    source: fdroid
+    package: "com.flycast.emulator"
+    package_name: "com.flycast.emulator"
+
+  redream:
+    enabled: false
+    source: url
+    url: "https://redream.io/download/redream.android-arm64-v8a.apk"
+    package_name: "io.recompiled.redream"
+
+  md_emu:
+    enabled: false
+    source: local
+    path: "android/apks/MD.emu.apk"
+    package_name: "com.explusalpha.MdEmu"
+
+  yaba_sanshiro:
+    enabled: false
+    source: local
+    path: "android/apks/YabaSanshiro2.apk"
+    package_name: "org.uoyabause.urern.YabaSanshiro2"
+
+  # ---------------------------------------------------------------------------
+  # EMULATORS - ARCADE & COMPUTER
+  # ---------------------------------------------------------------------------
+  scummvm:
+    enabled: false
+    source: fdroid
+    package: "org.scummvm.scummvm"
+    package_name: "org.scummvm.scummvm"
+
+  mame4droid:
+    enabled: false
+    source: local
+    path: "android/apks/MAME4droid.apk"
+    package_name: "com.seleuco.mame4droid"
+
+  dosbox_pure:
+    enabled: false
+    source: local
+    path: "android/apks/DOSBox-Pure.apk"
+    package_name: "com.dosbox.pure"
+
+  magic_dosbox:
+    enabled: false
+    source: local
+    path: "android/apks/MagicDosBox.apk"
+    package_name: "bruenor.magicbox"
+
+  openmw:
+    enabled: false
+    source: fdroid
+    package: "is.xyz.openmw"
+    package_name: "is.xyz.openmw"
+
+  j2me_loader:
+    enabled: false
+    source: fdroid
+    package: "ru.playsoftware.j2meloader"
+    package_name: "ru.playsoftware.j2meloader"
+
+  # ---------------------------------------------------------------------------
+  # WINDOWS/PC EMULATION (WINLATOR)
+  # See apps-reference.md for Winlator variant guide
+  # ---------------------------------------------------------------------------
+  winlator:
+    enabled: false
+    source: url
+    url: "https://github.com/brunodev85/winlator/releases/latest/download/Winlator.apk"
+    package_name: "com.winlator"
+
+  winlator_cmod:
+    enabled: false
+    source: local
+    path: "android/apks/Winlator-CMOD.apk"
+    package_name: "com.winlator.cmod"
+
+  winlator_frost:
+    enabled: false
+    source: local
+    path: "android/apks/Winlator-Frost.apk"
+    package_name: "com.winlator.frost"
+
+  winlator_vortex:
+    enabled: false
+    source: local
+    path: "android/apks/Winlator-Vortex.apk"
+    package_name: "com.winlator.vortex"
+
+  steamlator:
+    enabled: false
+    source: local
+    path: "android/apks/Steamlator.apk"
+    package_name: "com.steamlator"
+
+  gamehub:
+    enabled: false
+    source: local
+    path: "android/apks/GameHub.apk"
+    package_name: "com.gamesir.gamehub"
+
+  # ---------------------------------------------------------------------------
+  # STREAMING & CLOUD GAMING
+  # ---------------------------------------------------------------------------
+  moonlight:
+    enabled: false
+    source: url
+    url: "https://github.com/moonlight-stream/moonlight-android/releases/latest/download/Moonlight.apk"
+    package_name: "com.limelight"
+
+  steam_link:
+    enabled: false
+    source: local
+    path: "android/apks/Steam-Link.apk"
+    package_name: "com.valvesoftware.steamlink"
+
+  chiaki:
+    enabled: false
+    source: url
+    url: "https://github.com/streetpea/chiaki4deck/releases/latest/download/chiaki-ng-android.apk"
+    package_name: "re.chiaki.chiaki4deck"
+
+  parsec:
+    enabled: false
+    source: url
+    url: "https://builds.parsec.app/package/parsec-android.apk"
+    package_name: "tv.parsec.client"
+
+  xbox_game_pass:
+    enabled: false
+    source: local
+    path: "android/apks/XboxGamePass.apk"
+    package_name: "com.gamepass"
+
+  geforce_now:
+    enabled: false
+    source: local
+    path: "android/apks/GeForceNOW.apk"
+    package_name: "com.nvidia.geforcenow"
+
+  amazon_luna:
+    enabled: false
+    source: local
+    path: "android/apks/AmazonLuna.apk"
+    package_name: "com.amazon.luna"
+
+  shadow_pc:
+    enabled: false
+    source: local
+    path: "android/apks/Shadow.apk"
+    package_name: "com.blade.shadowcloudgaming"
+
+  boosteroid:
+    enabled: false
+    source: local
+    path: "android/apks/Boosteroid.apk"
+    package_name: "com.boosteroid.app"
+
+  # ---------------------------------------------------------------------------
+  # FILE MANAGEMENT & ARCHIVES
+  # ---------------------------------------------------------------------------
+  mixplorer:
+    enabled: false
+    source: local
+    path: "android/apks/MiXplorer.apk"
+    package_name: "com.mixplorer"
+
+  solid_explorer:
+    enabled: false
+    source: local
+    path: "android/apks/SolidExplorer.apk"
+    package_name: "pl.solidexplorer2"
+
+  material_files:
+    enabled: false
+    source: fdroid
+    package: "me.zhanghai.android.files"
+    package_name: "me.zhanghai.android.files"
+
+  x_plore:
+    enabled: false
+    source: local
+    path: "android/apks/X-plore.apk"
+    package_name: "com.lonelycatgames.Xplore"
+
+  zarchiver:
+    enabled: false
+    source: local
+    path: "android/apks/ZArchiver.apk"
+    package_name: "ru.zdevs.zarchiver"
+
+  # ---------------------------------------------------------------------------
+  # APP STORES & UPDATES
+  # ---------------------------------------------------------------------------
+  aurora_store:
+    enabled: false
+    source: url
+    url: "https://auroraoss.com/AuroraStore/Stable/AuroraStore_4.6.1.apk"
+    package_name: "com.aurora.store"
+
+  fdroid:
+    enabled: false
+    source: url
+    url: "https://f-droid.org/F-Droid.apk"
+    package_name: "org.fdroid.fdroid"
+
+  obtainium:
+    enabled: false
+    source: url
+    url: "https://github.com/ImranR98/Obtainium/releases/latest/download/app-release.apk"
+    package_name: "dev.imranr.obtainium"
+
+  taptap:
+    enabled: false
+    source: local
+    path: "android/apks/TapTap.apk"
+    package_name: "com.taptap"
+
+  itch_io:
+    enabled: false
+    source: local
+    path: "android/apks/itch.apk"
+    package_name: "io.itch.app"
+
+  # ---------------------------------------------------------------------------
+  # INPUT & CONTROLLER TOOLS
+  # ---------------------------------------------------------------------------
+  mantis_gamepad:
+    enabled: false
+    source: local
+    path: "android/apks/MantisGamepadPro.apk"
+    package_name: "app.mantispro.gamepad"
+
+  key_mapper:
+    enabled: false
+    source: fdroid
+    package: "io.github.sds100.keymapper"
+    package_name: "io.github.sds100.keymapper"
+
+  button_mapper:
+    enabled: false
+    source: local
+    path: "android/apks/ButtonMapper.apk"
+    package_name: "flar2.homebutton"
+
+  gamepad_tester:
+    enabled: false
+    source: fdroid
+    package: "ru.elron.gamepadtester"
+    package_name: "ru.elron.gamepadtester"
+
+  # ---------------------------------------------------------------------------
+  # SYSTEM & PERFORMANCE TOOLS
+  # ---------------------------------------------------------------------------
+  termux:
+    enabled: false
+    source: fdroid
+    package: "com.termux"
+    package_name: "com.termux"
+
+  shizuku:
+    enabled: false
+    source: url
+    url: "https://github.com/RikkaApps/Shizuku/releases/latest/download/shizuku.apk"
+    package_name: "moe.shizuku.privileged.api"
+
+  ladb:
+    enabled: false
+    source: fdroid
+    package: "com.draco.ladb"
+    package_name: "com.draco.ladb"
+
+  activity_launcher:
+    enabled: false
+    source: fdroid
+    package: "de.szalkowski.activitylauncher"
+    package_name: "de.szalkowski.activitylauncher"
+
+  aida64:
+    enabled: false
+    source: local
+    path: "android/apks/AIDA64.apk"
+    package_name: "com.finalwire.aida64"
+
+  cpu_z:
+    enabled: false
+    source: local
+    path: "android/apks/CPU-Z.apk"
+    package_name: "com.cpuid.cpu_z"
+
+  diskusage:
+    enabled: false
+    source: fdroid
+    package: "com.google.android.diskusage"
+    package_name: "com.google.android.diskusage"
+
+  # ---------------------------------------------------------------------------
+  # VPN & NETWORKING
+  # ---------------------------------------------------------------------------
+  tailscale:
+    enabled: false
+    source: url
+    url: "https://pkgs.tailscale.com/stable/tailscale-android.apk"
+    package_name: "com.tailscale.ipn"
+
+  wireguard:
+    enabled: false
+    source: fdroid
+    package: "com.wireguard.android"
+    package_name: "com.wireguard.android"
+
+  cloudflare_warp:
+    enabled: false
+    source: local
+    path: "android/apks/CloudflareWARP.apk"
+    package_name: "com.cloudflare.onedotonedotonedotone"
+
+  proton_vpn:
+    enabled: false
+    source: fdroid
+    package: "ch.protonvpn.android"
+    package_name: "ch.protonvpn.android"
+
+  mullvad_vpn:
+    enabled: false
+    source: fdroid
+    package: "net.mullvad.mullvadvpn"
+    package_name: "net.mullvad.mullvadvpn"
+
+  # ---------------------------------------------------------------------------
+  # SECURITY & PASSWORDS
+  # ---------------------------------------------------------------------------
+  bitwarden:
+    enabled: false
+    source: fdroid
+    package: "com.x8bit.bitwarden"
+    package_name: "com.x8bit.bitwarden"
+
+  onepassword:
+    enabled: false
+    source: local
+    path: "android/apks/1Password.apk"
+    package_name: "com.onepassword.android"
+
+  aegis:
+    enabled: false
+    source: fdroid
+    package: "com.beemdevelopment.aegis"
+    package_name: "com.beemdevelopment.aegis"
+
+  # ---------------------------------------------------------------------------
+  # BROWSERS
+  # ---------------------------------------------------------------------------
+  firefox:
+    enabled: false
+    source: fdroid
+    package: "org.mozilla.firefox"
+    package_name: "org.mozilla.firefox"
+
+  brave:
+    enabled: false
+    source: local
+    path: "android/apks/Brave.apk"
+    package_name: "com.brave.browser"
+
+  vivaldi:
+    enabled: false
+    source: local
+    path: "android/apks/Vivaldi.apk"
+    package_name: "com.vivaldi.browser"
+
+  kiwi:
+    enabled: false
+    source: local
+    path: "android/apks/Kiwi.apk"
+    package_name: "com.kiwibrowser.browser"
+
+  duckduckgo:
+    enabled: false
+    source: fdroid
+    package: "com.duckduckgo.mobile.android"
+    package_name: "com.duckduckgo.mobile.android"
+
+  # ---------------------------------------------------------------------------
+  # COMMUNICATION
+  # ---------------------------------------------------------------------------
+  discord:
+    enabled: false
+    source: local
+    path: "android/apks/Discord.apk"
+    package_name: "com.discord"
+
+  telegram:
+    enabled: false
+    source: fdroid
+    package: "org.telegram.messenger"
+    package_name: "org.telegram.messenger"
+
+  signal:
+    enabled: false
+    source: local
+    path: "android/apks/Signal.apk"
+    package_name: "org.thoughtcrime.securesms"
+
+  element:
+    enabled: false
+    source: fdroid
+    package: "im.vector.app"
+    package_name: "im.vector.app"
+
+  # ---------------------------------------------------------------------------
+  # MEDIA & STREAMING
+  # ---------------------------------------------------------------------------
+  vlc:
+    enabled: false
+    source: fdroid
+    package: "org.videolan.vlc"
+    package_name: "org.videolan.vlc"
+
+  newpipe:
+    enabled: false
+    source: fdroid
+    package: "org.schabi.newpipe"
+    package_name: "org.schabi.newpipe"
+
+  plex:
+    enabled: false
+    source: local
+    path: "android/apks/Plex.apk"
+    package_name: "com.plexapp.android"
+
+  kodi:
+    enabled: false
+    source: fdroid
+    package: "org.xbmc.kodi"
+    package_name: "org.xbmc.kodi"
+
+  spotify:
+    enabled: false
+    source: local
+    path: "android/apks/Spotify.apk"
+    package_name: "com.spotify.music"
+
+  twitch:
+    enabled: false
+    source: local
+    path: "android/apks/Twitch.apk"
+    package_name: "tv.twitch.android.app"
+
+  # ---------------------------------------------------------------------------
+  # NOTES & PRODUCTIVITY
+  # ---------------------------------------------------------------------------
+  obsidian:
+    enabled: false
+    source: local
+    path: "android/apks/Obsidian.apk"
+    package_name: "md.obsidian"
+
+  standard_notes:
+    enabled: false
+    source: fdroid
+    package: "com.standardnotes"
+    package_name: "com.standardnotes"
+
+  joplin:
+    enabled: false
+    source: fdroid
+    package: "net.cozic.joplin"
+    package_name: "net.cozic.joplin"
+
+  # ---------------------------------------------------------------------------
+  # LAUNCHERS
+  # ---------------------------------------------------------------------------
+  lawnchair:
+    enabled: false
+    source: url
+    url: "https://github.com/LawnchairLauncher/lawnchair/releases/latest/download/Lawnchair-release.apk"
+    package_name: "app.lawnchair"
+
+  nova_launcher:
+    enabled: false
+    source: local
+    path: "android/apks/NovaLauncher.apk"
+    package_name: "com.teslacoilsw.launcher"
+
+  # ---------------------------------------------------------------------------
+  # KEYBOARDS
+  # ---------------------------------------------------------------------------
+  gboard:
+    enabled: false
+    source: local
+    path: "android/apks/Gboard.apk"
+    package_name: "com.google.android.inputmethod.latin"
+
+  # ---------------------------------------------------------------------------
+  # ROOT & ADVANCED (requires root)
+  # ---------------------------------------------------------------------------
+  magisk:
+    enabled: false
+    source: url
+    url: "https://github.com/topjohnwu/Magisk/releases/latest/download/Magisk-v28.0.apk"
+    package_name: "com.topjohnwu.magisk"
+
+# =============================================================================
+# SYSTEM SETTINGS
+# =============================================================================
+
+configure_settings: true
+
+settings:
+  system:
+    screen_brightness: ""
+    screen_brightness_mode: ""
+    screen_off_timeout: ""
+    accelerometer_rotation: ""
+    haptic_feedback_enabled: ""
+
+  secure:
+    location_mode: ""
+    install_non_market_apps: ""
+
+  global:
+    stay_on_while_plugged_in: ""
+    window_animation_scale: ""
+    transition_animation_scale: ""
+    animator_duration_scale: ""
+
+# =============================================================================
+# FILE PUSH
+# =============================================================================
+
+push_files: true
+
+files:
+  roms:
+    enabled: false
+    local_path: "android/roms"
+    device_path: "/sdcard/RetroArch/roms"
+
+  bios:
+    enabled: false
+    local_path: "android/bios"
+    device_path: "/sdcard/RetroArch/system"
+
+  saves:
+    enabled: false
+    local_path: "android/saves"
+    device_path: "/sdcard/RetroArch/saves"
+
+  retroarch_config:
+    enabled: false
+    local_path: "android/retroarch.cfg"
+    device_path: "/sdcard/RetroArch/retroarch.cfg"
+
+  custom: []
+
+# =============================================================================
+# SHELL COMMANDS
+# =============================================================================
+
+execute_commands: true
+
+commands:
+  pre: []
+  post: []
+
+# =============================================================================
+# DEVICE PROFILES
+# =============================================================================
+
+device_profile: ""
+
+profiles:
+  retroid_pocket:
+    settings:
+      global:
+        window_animation_scale: "0.5"
+        transition_animation_scale: "0.5"
+        animator_duration_scale: "0.5"
+
+  ayaneo:
+    settings:
+      global:
+        stay_on_while_plugged_in: "3"
+        window_animation_scale: "0.5"
+        transition_animation_scale: "0.5"
+
+  odin:
+    settings:
+      global:
+        window_animation_scale: "0.5"
+        transition_animation_scale: "0.5"
+        animator_duration_scale: "0.5"
+
+  logitech_g_cloud:
+    settings:
+      global:
+        stay_on_while_plugged_in: "3"
+
+  generic:
+    settings:
+      global:
+        window_animation_scale: "1.0"
+        transition_animation_scale: "1.0"
+        animator_duration_scale: "1.0"
+
+# =============================================================================
+# F-DROID
+# =============================================================================
+
+fdroid:
+  enabled: false
+  repo_url: "https://f-droid.org/repo"
+  extra_repos: []
+
+# =============================================================================
+# OPTIONS
+# =============================================================================
+
+verbose: false
+keep_apks: false
+show_commands: false
